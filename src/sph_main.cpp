@@ -33,8 +33,6 @@
 
 SPHSystem *sph;
 
-char *window_title;
-
 GLuint v;
 GLuint f;
 GLuint p;
@@ -117,7 +115,7 @@ void set_shaders()
 void draw_box(float ox, float oy, float oz, float width, float height, float length)
 {
     glLineWidth(1.0f);
-	glColor3f(1.0f, 0.0f, 0.0f);
+    glColor3f(0.0f, 0.0f, 0.0f);
 
     glBegin(GL_LINES);   
 		
@@ -172,9 +170,6 @@ void init_sph_system()
 
 	sph=new SPHSystem();
 	sph->init_system();
-
-    //sph_timer=new Timer();
-	window_title=(char *)malloc(sizeof(char)*50);
 }
 
 void init()
@@ -185,11 +180,11 @@ void init()
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
-	gluPerspective(45.0, (float)window_width/window_height, 10.0f, 100.0);
+    gluPerspective(45.0, (float)window_width/window_height, 1.0f, 100.0);
+    //glTranslatef(0.0f, 0.0f, 10.0f);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-	glTranslatef(0.0f, 0.0f, -3.0f);
 }
 
 void init_ratio()
@@ -202,11 +197,12 @@ void init_ratio()
 void render_particles()
 {
     glPointSize(1.0f);
-	glColor3f(0.2f, 0.2f, 1.0f);
+    //glColor3f(0.2f, 0.8f, 1.0f);
 
 	for(uint i=0; i<sph->num_particle; i++)
 	{
 		glBegin(GL_POINTS);
+        glColor3f(sph->mem[i].colour.x, sph->mem[i].colour.y, sph->mem[i].colour.z);
 			glVertex3f(sph->mem[i].pos.x*sim_ratio.x+real_world_origin.x, 
 						sph->mem[i].pos.y*sim_ratio.y+real_world_origin.y,
 						sph->mem[i].pos.z*sim_ratio.z+real_world_origin.z);
@@ -245,10 +241,7 @@ void display_func()
 
     glutSwapBuffers();
 	
-    //sph_timer->update();
-	memset(window_title, 0, 50);
-    //sprintf(window_title, "SPH System 3D. FPS: %f", sph_timer->get_fps());
-	glutSetWindowTitle(window_title);
+    glutSetWindowTitle("SPH Multiple Fluid Prototype");
 }
 
 void idle_func()
@@ -281,35 +274,51 @@ void keyboard_func(unsigned char key, int x, int y)
 
 	if(key == 'w')
 	{
-		zTrans += 0.3f;
+        zTrans += 1.0f;
 	}
 
 	if(key == 's')
 	{
-		zTrans -= 0.3f;
+        zTrans -= 1.0f;
 	}
 
 	if(key == 'a')
 	{
-		xTrans -= 0.3f;
+        xTrans += 0.5f;
 	}
 
 	if(key == 'd')
 	{
-		xTrans += 0.3f;
+        xTrans -= 0.5f;
 	}
 
-	if(key == 'q')
-	{
-		yTrans -= 0.3f;
-	}
-
-	if(key == 'e')
-	{
-		yTrans += 0.3f;
-	}
+    if(key == 27)
+    {
+       exit(0);
+    }
 
 	glutPostRedisplay();
+}
+
+void SpecialInput(int key, int x, int y)
+{
+    switch(key)
+    {
+        case GLUT_KEY_UP:
+            yTrans -= 0.5f;
+        break;
+        case GLUT_KEY_DOWN:
+            yTrans += 0.5f;
+        break;
+        case GLUT_KEY_LEFT:
+            xTrans += 0.5f;
+        break;
+        case GLUT_KEY_RIGHT:
+            xTrans -= 0.5f;
+        break;
+    }
+
+    glutPostRedisplay();
 }
 
 void mouse_func(int button, int state, int x, int y)
@@ -366,6 +375,7 @@ int main(int argc, char **argv)
     glutDisplayFunc(display_func);
 	glutReshapeFunc(reshape_func);
 	glutKeyboardFunc(keyboard_func);
+    glutSpecialFunc(SpecialInput);
 	glutMouseFunc(mouse_func);
 	glutMotionFunc(motion_func);
 	glutIdleFunc(idle_func);

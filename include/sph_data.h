@@ -28,11 +28,11 @@
 float window_width=1000;
 float window_height=1000;
 
-float xRot = 15.0f;
-float yRot = 0.0f;
+float xRot = 0.0f;
+float yRot = -30.0f;
 float xTrans = 0.0;
-float yTrans = 0;
-float zTrans = -35.0;
+float yTrans = 3.0;
+float zTrans = -25.0;
 
 int ox;
 int oy;

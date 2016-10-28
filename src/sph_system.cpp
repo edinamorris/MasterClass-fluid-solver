@@ -40,7 +40,7 @@ SPHSystem::SPHSystem()
 	tot_cell=grid_size.x*grid_size.y*grid_size.z;
 
 	gravity.x=0.0f; 
-	gravity.y=-6.8f;
+    gravity.y=-9.8f;
 	gravity.z=0.0f;
 	wall_damping=-0.5f;
 	rest_density=1000.0f;
@@ -104,26 +104,47 @@ void SPHSystem::init_system()
 {
 	float3 pos;
 	float3 vel;
+    float3 colour;
 
 	vel.x=0.0f;
 	vel.y=0.0f;
 	vel.z=0.0f;
+    colour.x=0.2f;
+    colour.y=0.8f;
+    colour.z=1.0f;
+
 
     for(pos.x=world_size.x*0.0f; pos.x<world_size.x*0.4f; pos.x+=(kernel*0.5f))
 	{
-        for(pos.y=world_size.y*0.0f; pos.y<world_size.y*0.2f; pos.y+=(kernel*0.5f))
+        for(pos.y=world_size.y*0.0f; pos.y<world_size.y*0.5f; pos.y+=(kernel*0.5f))
 		{
             for(pos.z=world_size.z*0.0f; pos.z<world_size.z*0.4f; pos.z+=(kernel*0.5f))
 			{
-				add_particle(pos, vel);
+                //need to add others?
+                add_particle(pos, vel, colour);
 			}
 		}
 	}
+    colour.x=0.6f;
+    colour.y=0.0f;
+    colour.z=0.6f;
+
+    for(pos.x=world_size.x*0.0f; pos.x<world_size.x*0.4f; pos.x+=(kernel*0.5f))
+    {
+        for(pos.y=world_size.y*0.0f; pos.y<world_size.y*0.5f; pos.y+=(kernel*0.5f))
+        {
+            for(pos.z=world_size.z*0.0f+0.4; pos.z<world_size.z*0.4f+0.4; pos.z+=(kernel*0.5f))
+            {
+                //need to add others?
+                add_particle(pos, vel, colour);
+            }
+        }
+    }
 
 	printf("Init Particle: %u\n", num_particle);
 }
 
-void SPHSystem::add_particle(float3 pos, float3 vel)
+void SPHSystem::add_particle(float3 pos, float3 vel, float3 col)
 {
 	Particle *p=&(mem[num_particle]);
 
@@ -131,6 +152,7 @@ void SPHSystem::add_particle(float3 pos, float3 vel)
 
 	p->pos=pos;
 	p->vel=vel;
+    p->colour=col;
 
 	p->acc.x=0.0f;
 	p->acc.y=0.0f;

@@ -32,6 +32,7 @@ public:
 	float3 vel;
 	float3 acc;
 	float3 ev;
+    float3 colour;
 
 	float dens;
 	float pres;
@@ -85,7 +86,7 @@ public:
 	~SPHSystem();
 	void animation();
 	void init_system();
-	void add_particle(float3 pos, float3 vel);
+    void add_particle(float3 pos, float3 vel, float3 col);
 
 private:
 	void build_table();
