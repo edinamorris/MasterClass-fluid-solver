@@ -34,7 +34,15 @@ public:
 	float3 ev;
     float3 colour;
 
+    //made these individual for each particle
+    float visc;
+    float mass;
+    float selfDens;
+    float lplcColour;
+
 	float dens;
+    //individual density for liquids
+    float restdens;
 	float pres;
 
 	float surf_norm;
@@ -86,7 +94,9 @@ public:
 	~SPHSystem();
 	void animation();
 	void init_system();
-    void add_particle(float3 pos, float3 vel, float3 col);
+    void damnScenario();
+    void dropScenario();
+    void add_particle(float3 pos, float3 vel, float3 col, float density, float mass, float visc, float _selfDens, float _lplcColour);
 
 private:
 	void build_table();

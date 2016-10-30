@@ -169,7 +169,7 @@ void init_sph_system()
     real_world_side.z=8.0f;
 
 	sph=new SPHSystem();
-	sph->init_system();
+    //sph->init_system();
 }
 
 void init()
@@ -272,6 +272,18 @@ void keyboard_func(unsigned char key, int x, int y)
 		sph->sys_running=1-sph->sys_running;
 	}
 
+    if(key == '1')
+    {
+        sph->init_system();
+    }
+    if(key == '2' )
+    {
+        sph->damnScenario();
+    }
+    if(key == '3')
+    {
+        sph->dropScenario();
+    }
 	if(key == 'w')
 	{
         zTrans += 1.0f;

@@ -28,7 +28,6 @@ SPHSystem::SPHSystem()
 	num_particle=0;
 
 	kernel=0.04f;
-	mass=0.02f;
 
     world_size.x=0.64f;
     world_size.y=0.64f;
@@ -43,9 +42,8 @@ SPHSystem::SPHSystem()
     gravity.y=-9.8f;
 	gravity.z=0.0f;
 	wall_damping=-0.5f;
-	rest_density=1000.0f;
 	gas_constant=1.0f;
-	viscosity=6.5f;
+
 	time_step=0.003f;
 	surf_norm=6.0f;
 	surf_coe=0.1f;
@@ -58,8 +56,6 @@ SPHSystem::SPHSystem()
 	lplc_poly6=-945/(8 * PI * pow(kernel, 9));
 
 	kernel_2=kernel*kernel;
-	self_dens=mass*poly6_value*pow(kernel, 6);
-	self_lplc_color=lplc_poly6*mass*kernel_2*(0-3/4*kernel_2);
 
 	mem=(Particle *)malloc(sizeof(Particle)*max_particle);
 	cell=(Particle **)malloc(sizeof(Particle *)*tot_cell);
@@ -78,7 +74,7 @@ SPHSystem::SPHSystem()
 	printf("Poly6 Kernel: %f\n", poly6_value);
 	printf("Spiky Kernel: %f\n", spiky_value);
 	printf("Visco Kernel: %f\n", visco_value);
-	printf("Self Density: %f\n", self_dens);
+    //printf("Self Density: %f\n", self_dens);
 }
 
 SPHSystem::~SPHSystem()
@@ -106,37 +102,61 @@ void SPHSystem::init_system()
 	float3 vel;
     float3 colour;
 
+    float highDensity=1250;
+    float lowDensity=750;
+
 	vel.x=0.0f;
 	vel.y=0.0f;
 	vel.z=0.0f;
+
+    //first phase
     colour.x=0.2f;
     colour.y=0.8f;
     colour.z=1.0f;
 
+    //seperate values for each phase
+    float individualMass =0.02f;
+    float individualVisc = 6.5f;
+    float self_dens=individualMass*poly6_value*pow(kernel, 6);
+    float self_lplc_color=lplc_poly6*individualMass*kernel_2*(0-3/4*kernel_2);
+
+    //change rest density value individually - different liquids
+    float dens=lowDensity;
 
     for(pos.x=world_size.x*0.0f; pos.x<world_size.x*0.4f; pos.x+=(kernel*0.5f))
 	{
-        for(pos.y=world_size.y*0.0f; pos.y<world_size.y*0.5f; pos.y+=(kernel*0.5f))
+        for(pos.y=world_size.y*0.0f; pos.y<world_size.y*0.7f; pos.y+=(kernel*0.5f))
 		{
             for(pos.z=world_size.z*0.0f; pos.z<world_size.z*0.4f; pos.z+=(kernel*0.5f))
 			{
-                //need to add others?
-                add_particle(pos, vel, colour);
+                //added colour and density for both liquids
+                add_particle(pos, vel, colour, dens, individualMass, individualVisc, self_dens, self_lplc_color);
 			}
 		}
 	}
+
+    //second phase
     colour.x=0.6f;
     colour.y=0.0f;
     colour.z=0.6f;
 
+    //seperate values for each phase
+    individualMass = 0.02f;
+    individualVisc = 6.5f;
+    self_dens=individualMass*poly6_value*pow(kernel, 6);
+    self_lplc_color=lplc_poly6*individualMass*kernel_2*(0-3/4*kernel_2);
+
+    //change rest density value individually - different liquids
+    dens=highDensity;
+
     for(pos.x=world_size.x*0.0f; pos.x<world_size.x*0.4f; pos.x+=(kernel*0.5f))
     {
-        for(pos.y=world_size.y*0.0f; pos.y<world_size.y*0.5f; pos.y+=(kernel*0.5f))
+        for(pos.y=world_size.y*0.0f; pos.y<world_size.y*0.7f; pos.y+=(kernel*0.5f))
         {
             for(pos.z=world_size.z*0.0f+0.4; pos.z<world_size.z*0.4f+0.4; pos.z+=(kernel*0.5f))
             {
-                //need to add others?
-                add_particle(pos, vel, colour);
+                //added colour and density for both liquids
+                add_particle(pos, vel, colour, dens, individualMass, individualVisc, self_dens, self_lplc_color);
             }
         }
     }
@@ -144,7 +164,145 @@ void SPHSystem::init_system()
 	printf("Init Particle: %u\n", num_particle);
 }
 
-void SPHSystem::add_particle(float3 pos, float3 vel, float3 col)
+//blue lower density
+void SPHSystem::damnScenario()
+{
+    float3 pos;
+    float3 vel;
+    float3 colour;
+
+    vel.x=0.0f;
+    vel.y=0.0f;
+    vel.z=0.0f;
+
+    float highDensity=1250;
+    float lowDensity=750;
+
+    //first phase
+    colour.x=0.2f;
+    colour.y=0.8f;
+    colour.z=1.0f;
+
+    //individual values for each phase
+    float individualMass =0.02f;
+    float individualVisc = 6.5f;
+    float self_dens=individualMass*poly6_value*pow(kernel, 6);
+    float self_lplc_color=lplc_poly6*individualMass*kernel_2*(0-3/4*kernel_2);
+
+    //change rest density value individually - different liquids
+    float dens=lowDensity;
+
+    for(pos.x=world_size.x*0.0f; pos.x<world_size.x*0.2f; pos.x+=(kernel*0.5f))
+    {
+        for(pos.y=world_size.y*0.0f; pos.y<world_size.y*0.7f; pos.y+=(kernel*0.5f))
+        {
+            for(pos.z=world_size.z*0.0f+0.1; pos.z<world_size.z*0.7f+0.1; pos.z+=(kernel*0.5f))
+            {
+                //added colour and density for both liquids
+                add_particle(pos, vel, colour, dens, individualMass, individualVisc, self_dens, self_lplc_color);
+            }
+        }
+    }
+
+    //second phase
+    colour.x=0.6f;
+    colour.y=0.0f;
+    colour.z=0.6f;
+
+    //individual values for different phases
+    individualMass=0.02;
+    individualVisc = 6.5f;
+    self_dens=individualMass*poly6_value*pow(kernel, 6);
+    self_lplc_color=lplc_poly6*individualMass*kernel_2*(0-3/4*kernel_2);
+
+    //change rest density value individually - different liquids
+    dens=highDensity;
+
+    for(pos.x=world_size.x*0.0f+0.5; pos.x<world_size.x*0.2f+0.5; pos.x+=(kernel*0.5f))
+    {
+        for(pos.y=world_size.y*0.0f; pos.y<world_size.y*0.7f; pos.y+=(kernel*0.5f))
+        {
+            for(pos.z=world_size.z*0.0f+0.1; pos.z<world_size.z*0.7f+0.1; pos.z+=(kernel*0.5f))
+            {
+                //added colour and density for both liquids
+                add_particle(pos, vel, colour, dens, individualMass, individualVisc, self_dens, self_lplc_color);
+            }
+        }
+    }
+
+    printf("Init Particle: %u\n", num_particle);
+}
+
+//blue = bottom, purple = drop
+void SPHSystem::dropScenario()
+{
+    float3 pos;
+    float3 vel;
+    float3 colour;
+
+    float highDensity=1500;
+    float lowDensity=750;
+
+    vel.x=0.0f;
+    vel.y=0.0f;
+    vel.z=0.0f;
+
+    //first phase
+    colour.x=0.2f;
+    colour.y=0.8f;
+    colour.z=1.0f;
+
+    //individual values for different phases
+    float individualMass =0.02f;
+    float individualVisc = 6.5f;
+    float self_dens=individualMass*poly6_value*pow(kernel, 6);
+    float self_lplc_color=lplc_poly6*individualMass*kernel_2*(0-3/4*kernel_2);
+
+    //change rest density value individually - different liquids
+    float dens=lowDensity;
+
+    for(pos.x=world_size.x*0.0f; pos.x<world_size.x*1.0; pos.x+=(kernel*0.5f))
+    {
+        for(pos.y=world_size.y*0.0f; pos.y<world_size.y*0.15f; pos.y+=(kernel*0.5f))
+        {
+            for(pos.z=world_size.z*0.0f; pos.z<world_size.z*1.0; pos.z+=(kernel*0.5f))
+            {
+                //added colour and density for both liquids
+                add_particle(pos, vel, colour, dens, individualMass, individualVisc, self_dens, self_lplc_color);
+            }
+        }
+    }
+
+    //second phase
+    colour.x=0.6f;
+    colour.y=0.0f;
+    colour.z=0.6f;
+
+    //individual values for different phases
+    individualMass=0.02;
+    individualVisc = 6.5f;
+    self_dens=individualMass*poly6_value*pow(kernel, 6);
+    self_lplc_color=lplc_poly6*individualMass*kernel_2*(0-3/4*kernel_2);
+
+    //change rest density value individually - different liquids
+    dens=highDensity;
+
+    for(pos.x=world_size.x*0.0f+0.2; pos.x<world_size.x*0.4f+0.2; pos.x+=(kernel*0.5f))
+    {
+        for(pos.y=world_size.y*0.0f+0.4; pos.y<world_size.y*0.3f+0.4; pos.y+=(kernel*0.5f))
+        {
+            for(pos.z=world_size.z*0.0f+0.2; pos.z<world_size.z*0.4f+0.2; pos.z+=(kernel*0.5f))
+            {
+                //added colour and density for both liquids
+                add_particle(pos, vel, colour, dens, individualMass, individualVisc, self_dens, self_lplc_color);
+            }
+        }
+    }
+
+    printf("Init Particle: %u\n", num_particle);
+}
+
+void SPHSystem::add_particle(float3 pos, float3 vel, float3 col, float density, float _mass, float _visc, float _selfDens, float _lplcColour)
 {
 	Particle *p=&(mem[num_particle]);
 
@@ -154,6 +312,11 @@ void SPHSystem::add_particle(float3 pos, float3 vel, float3 col)
 	p->vel=vel;
     p->colour=col;
 
+    p->mass=_mass;
+    p->visc=_visc;
+    p->selfDens=_selfDens;
+    p->lplcColour=_lplcColour;
+
 	p->acc.x=0.0f;
 	p->acc.y=0.0f;
 	p->acc.z=0.0f;
@@ -161,7 +324,10 @@ void SPHSystem::add_particle(float3 pos, float3 vel, float3 col)
 	p->ev.y=0.0f;
 	p->ev.z=0.0f;
 
-	p->dens=rest_density;
+    p->dens=p->restdens;
+    //individual rest densities for each phase
+    p->restdens=density;
+
 	p->pres=0.0f;
 
 	p->next=NULL;
@@ -247,7 +413,7 @@ void SPHSystem::comp_dens_pres()
 							continue;
 						}
 
-						p->dens=p->dens + mass * poly6_value * pow(kernel_2-r2, 3);
+                        p->dens=p->dens + p->mass * poly6_value * pow(kernel_2-r2, 3);
 
 						np=np->next;
 					}
@@ -255,8 +421,10 @@ void SPHSystem::comp_dens_pres()
 			}
 		}
 
-		p->dens=p->dens+self_dens;
-		p->pres=(pow(p->dens / rest_density, 7) - 1) *gas_constant;
+        p->dens=p->dens+p->selfDens;
+        //need to change pressure equation based on drift velocity
+        //immiscable fluids pressure in equation vanishes
+        p->pres=(pow(p->dens / p->restdens, 7) - 1) *gas_constant;
 	}
 }
 
@@ -325,7 +493,7 @@ void SPHSystem::comp_force_adv()
 						if(r2 < kernel_2 && r2 > INF)
 						{
 							r=sqrt(r2);
-							V=mass/np->dens/2;
+                            V=p->mass/np->dens/2;
 							kernel_r=kernel-r;
 
 							pres_kernel=spiky_value * kernel_r * kernel_r;
@@ -339,7 +507,7 @@ void SPHSystem::comp_force_adv()
 							rel_vel.z=np->ev.z-p->ev.z;
 
 							visc_kernel=visco_value*(kernel-r);
-							temp_force=V * viscosity * visc_kernel;
+                            temp_force=V * p->visc * visc_kernel;
 							p->acc.x=p->acc.x + rel_vel.x*temp_force; 
 							p->acc.y=p->acc.y + rel_vel.y*temp_force; 
 							p->acc.z=p->acc.z + rel_vel.z*temp_force; 
@@ -357,7 +525,7 @@ void SPHSystem::comp_force_adv()
 			}
 		}
 
-		lplc_color+=self_lplc_color/p->dens;
+        lplc_color+=p->lplcColour/p->dens;
 		p->surf_norm=sqrt(grad_color.x*grad_color.x+grad_color.y*grad_color.y+grad_color.z*grad_color.z);
 
 		if(p->surf_norm > surf_norm)
