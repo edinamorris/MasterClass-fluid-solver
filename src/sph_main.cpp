@@ -27,6 +27,7 @@
 
 #ifdef __APPLE__
 #include <GLUT/glut.h>
+#include <OpenGL.h>
 #else
 #include <GL/glut.h>
 #endif
@@ -180,8 +181,7 @@ void init()
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
-    gluPerspective(45.0, (float)window_width/window_height, 1.0f, 100.0);
-    //glTranslatef(0.0f, 0.0f, 10.0f);
+    gluPerspective(45.0, (float)window_width/window_height, 0.1f, 100.0);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
@@ -197,25 +197,29 @@ void init_ratio()
 void render_particles()
 {
     glPointSize(1.0f);
-    //glColor3f(0.2f, 0.8f, 1.0f);
 
-	for(uint i=0; i<sph->num_particle; i++)
-	{
+    for(uint i=0; i<sph->num_particle; i++)
+    {
 		glBegin(GL_POINTS);
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glColor3f(sph->mem[i].colour.x, sph->mem[i].colour.y, sph->mem[i].colour.z);
 			glVertex3f(sph->mem[i].pos.x*sim_ratio.x+real_world_origin.x, 
 						sph->mem[i].pos.y*sim_ratio.y+real_world_origin.y,
-						sph->mem[i].pos.z*sim_ratio.z+real_world_origin.z);
+                        sph->mem[i].pos.z*sim_ratio.z+real_world_origin.z);
 		glEnd();
-	}
+    }
 }
 
 void display_func()
 {
-	glEnable(GL_POINT_SMOOTH);
-	glEnable(GL_DEPTH_TEST);
-	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_POINT_SMOOTH);
+
+    glDepthMask(GL_TRUE);
+    glEnable(GL_DEPTH_TEST);
+
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glPushMatrix();
 
@@ -258,7 +262,7 @@ void reshape_func(GLint width, GLint height)
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
-	gluPerspective(45.0, (float)width/height, 0.001, 100.0);
+    gluPerspective(45.0, (float)width/height, 0.1, 100.0);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
@@ -381,8 +385,6 @@ int main(int argc, char **argv)
 	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE_NV);
 	glEnable(GL_POINT_SPRITE_ARB);
 	glTexEnvi(GL_POINT_SPRITE_ARB, GL_COORD_REPLACE_ARB, GL_TRUE);
-	glDepthMask(GL_TRUE);
-	glEnable(GL_DEPTH_TEST);
 
     glutDisplayFunc(display_func);
 	glutReshapeFunc(reshape_func);

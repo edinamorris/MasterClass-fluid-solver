@@ -15,7 +15,8 @@ SOURCES+=$$PWD/src/sph_main.cpp \
 HEADERS+=$$PWD/include/sph_data.h \
          $$PWD/include/sph_header.h \
          $$PWD/include/sph_system.h \
-         $$PWD/include/sph_type.h
+         $$PWD/include/sph_type.h \
+         $$PWD/include/vec3.h
 
 OTHER_FILES+=$$PWD/Shader/shader.fs \
              $$PWD/Shader/shader.vs

@@ -57,7 +57,6 @@ public:
 	uint num_particle;
 
 	float kernel;
-	float mass;
 
 	float3 world_size;
 	float cell_size;
@@ -66,9 +65,7 @@ public:
 
 	float3 gravity;
 	float wall_damping;
-	float rest_density;
 	float gas_constant;
-	float viscosity;
 	float time_step;
 	float surf_norm;
 	float surf_coe;
@@ -81,8 +78,22 @@ public:
 	float lplc_poly6;
 
 	float kernel_2;
-	float self_dens;
-	float self_lplc_color;
+
+    //phase 1
+    float3 colour_1;
+    float individualMass_1;
+    float individualVisc_1;
+    float self_dens_1;
+    float self_lplc_color_1;
+    float dens_1;
+
+    //phase 2
+    float3 colour_2;
+    float individualMass_2;
+    float individualVisc_2;
+    float self_dens_2;
+    float self_lplc_color_2;
+    float dens_2;
 
 	Particle *mem;
 	Particle **cell;
@@ -96,6 +107,7 @@ public:
 	void init_system();
     void damnScenario();
     void dropScenario();
+    void updateParticles();
     void add_particle(float3 pos, float3 vel, float3 col, float density, float mass, float visc, float _selfDens, float _lplcColour);
 
 private:
