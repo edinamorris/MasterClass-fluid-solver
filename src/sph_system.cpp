@@ -34,8 +34,11 @@ SPHSystem::SPHSystem()
 {
     max_particle=30000;
 	num_particle=0;
+    phase1Particle=0;
+    phase2Particle=0;
 
-	kernel=0.04f;
+    //h
+    kernel=0.04f;
 
     world_size.x=0.64f;
     world_size.y=0.64f;
@@ -46,11 +49,13 @@ SPHSystem::SPHSystem()
 	grid_size.z=(uint)ceil(world_size.z/cell_size);
 	tot_cell=grid_size.x*grid_size.y*grid_size.z;
 
+    h=1.0f;
+
 	gravity.x=0.0f; 
     gravity.y=-9.8f;
 	gravity.z=0.0f;
 	wall_damping=-0.5f;
-	gas_constant=1.0f;
+    gas_constant=1.0f;
 
 	time_step=0.003f;
 	surf_norm=6.0f;
@@ -163,6 +168,9 @@ void SPHSystem::init_system()
         }
     }
 
+    volume_fraction_1=phase1Particle/num_particle;
+    volume_fraction_2=phase2Particle/num_particle;
+
 	printf("Init Particle: %u\n", num_particle);
 }
 
@@ -175,9 +183,6 @@ void SPHSystem::damnScenario()
     vel.x=0.0f;
     vel.y=0.0f;
     vel.z=0.0f;
-
-    volume_fraction_1=0.5;
-    volume_fraction_2=0.5;
 
     for(pos.x=world_size.x*0.0f; pos.x<world_size.x*0.2f; pos.x+=(kernel*0.5f))
     {
@@ -202,6 +207,9 @@ void SPHSystem::damnScenario()
             }
         }
     }
+
+    volume_fraction_1=phase1Particle/num_particle;
+    volume_fraction_2=phase2Particle/num_particle;
 
     printf("Init Particle: %u\n", num_particle);
 }
@@ -240,6 +248,9 @@ void SPHSystem::dropScenario()
         }
     }
 
+    volume_fraction_1=phase1Particle/num_particle;
+    volume_fraction_2=phase2Particle/num_particle;
+
     printf("Init Particle: %u\n", num_particle);
 }
 
@@ -262,6 +273,8 @@ void SPHSystem::add_particle(int _phase, float3 pos, float3 vel)
         //individual rest densities for each phase
         p->restdens=dens_1;
         p->dens=p->restdens;
+
+        phase1Particle++;
     }
     else if(_phase==2)
     {
@@ -276,6 +289,7 @@ void SPHSystem::add_particle(int _phase, float3 pos, float3 vel)
         //individual rest densities for each phase
         p->restdens=dens_2;
         p->dens=p->restdens;
+        phase2Particle++;
     }
 
 	p->acc.x=0.0f;
@@ -342,6 +356,8 @@ void SPHSystem::comp_dens_pres()
 
 		p->dens=0.0f;
 		p->pres=0.0f;
+        //each time clearing vector
+        p->neighbour.clear();
 
 		for(int x=-1; x<=1; x++)
 		{
@@ -369,22 +385,30 @@ void SPHSystem::comp_dens_pres()
 
 						if(r2<INF || r2>=kernel_2)
 						{
-							np=np->next;
-							continue;
-						}
+                            np=np->next;
+                            continue;
+                        }
 
                         p->dens=p->dens + p->mass * poly6_value * pow(kernel_2-r2, 3);
+
+                        //check for neighbours
+                        if(r2>h*h)
+                        {
+                            np=np->next;
+                            continue;
+                        }
+                        //adding neighbours for each particle
+                        p->neighbour.push_back(np);
 
 						np=np->next;
 					}
 				}
 			}
 		}
-
         p->dens=p->dens+p->selfDens;
-        //need to change pressure equation based on drift velocity
-        //immiscable fluids pressure in equation vanishes
         p->pres=(pow(p->dens / p->restdens, 7) - 1) *gas_constant;
+
+        //std::cout<<"pressure >"<<p->pres<<"\n";
 	}
 }
 
@@ -506,13 +530,33 @@ void SPHSystem::comp_force_adv()
 
         if(p->phase==1)
         {
-            //volume fraction may have to be for individual particle
+            vec3 firstPhase; //acceleartion needs changing
+            firstPhase.x=strengthFac*(p->restdens-(volume_fraction_2*dens_2)/(volume_fraction_1*dens_1+volume_fraction_2*dens_2)*dens_2)*p->acc.x;
+            firstPhase.y=strengthFac*(p->restdens-(volume_fraction_2*dens_2)/(volume_fraction_1*dens_1+volume_fraction_2*dens_2)*dens_2)*p->acc.y;
+            firstPhase.z=strengthFac*(p->restdens-(volume_fraction_2*dens_2)/(volume_fraction_1*dens_1+volume_fraction_2*dens_2)*dens_2)*p->acc.y;
+
+            vec3 secondPhase;
+            vec3 calc=(0,0,0);
+            //neighbourhood particles
+            for(int j=0; j<10; j++)//need to find number of neighbours for each particle
+            {
+                Particle neighbour;
+                neighbour=&(p->neighbour[j]);
+                vec3 temp;
+                temp = neighbour.mass/;
+
+                calc+=temp;
+            }
+            secondPhase.x=strengthFac*();
+
+            vec3 thirdPhase;
+
             float sum=(volume_fraction_1*p->dens/(volume_fraction_1*dens_1))*p->dens;
-            float thirdPhase=(volume_fraction_1/volume_fraction_1)-(volume_fraction_1*p->dens/volume_fraction_1*dens_1)*(volume_fraction_1/volume_fraction_1);
+            //float thirdPhase=(volume_fraction_1/volume_fraction_1)-(volume_fraction_1*p->dens/volume_fraction_1*dens_1)*(volume_fraction_1/volume_fraction_1);
             //drift velocity - second phase is where pressure relationship will affect the misc/immiscibility of the mixture
-            p->driftVelocity.x=(strengthFac*(dens_1-sum)*p->acc.x)-(strengthFac*pressureRelationship*(dens_1-sum)-diffuseConst*thirdPhase);
-            p->driftVelocity.y=(strengthFac*(dens_1-sum)*p->acc.x)-(strengthFac*pressureRelationship*(dens_1-sum)-diffuseConst*thirdPhase);
-            p->driftVelocity.z=(strengthFac*(dens_1-sum)*p->acc.y)-(strengthFac*pressureRelationship*(dens_1-sum)-diffuseConst*thirdPhase);
+            p->driftVelocity.x=firstPhase.x-secondPhase.x-thirdPhase.x;
+            //p->driftVelocity.y=(strengthFac*(dens_1-sum)*p->acc.x)-(strengthFac*pressureRelationship*(dens_1-sum)-diffuseConst*thirdPhase);
+            //p->driftVelocity.z=(strengthFac*(dens_1-sum)*p->acc.y)-(strengthFac*pressureRelationship*(dens_1-sum)-diffuseConst*thirdPhase);
         }
         else if(p->phase==2)
         {
@@ -550,10 +594,14 @@ void SPHSystem::advection()
 	{
 		p=&(mem[i]);
 
-        //potentially add drift velocity in with this step
+        //potentially add drift velocity in with this step or have it replace velocity as a whole
         p->vel.x=p->vel.x+p->driftVelocity.x+p->acc.x*time_step/p->dens+gravity.x*time_step;
         p->vel.y=p->vel.y+p->driftVelocity.y+p->acc.y*time_step/p->dens+gravity.y*time_step;
         p->vel.z=p->vel.z+p->driftVelocity.z+p->acc.z*time_step/p->dens+gravity.z*time_step;
+
+        //p->vel.x=p->driftVelocity.x;
+        //p->vel.y=p->driftVelocity.y;
+        //p->vel.z=p->driftVelocity.z;
 
 		p->pos.x=p->pos.x+p->vel.x*time_step;
 		p->pos.y=p->pos.y+p->vel.y*time_step;

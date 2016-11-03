@@ -22,7 +22,10 @@
 #ifndef __SPHSYSTEM_H__
 #define __SPHSYSTEM_H__
 
+#include <stdio.h>
+#include <stdlib.h>
 #include "sph_type.h"
+#include "vector"
 
 class Particle
 {
@@ -49,6 +52,9 @@ public:
 
 	float surf_norm;
 
+    //neighbour vector
+    std::vector<Particle*> neighbour;
+
 	Particle *next;
 };
 
@@ -57,6 +63,8 @@ class SPHSystem
 public:
 	uint max_particle;
 	uint num_particle;
+    uint phase1Particle;
+    uint phase2Particle;
 
 	float kernel;
 
@@ -80,6 +88,8 @@ public:
 	float lplc_poly6;
 
 	float kernel_2;
+    //smoothing radius
+    float h;
 
     int misc;
 
