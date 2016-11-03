@@ -216,24 +216,23 @@ void SPHSystem::dropScenario()
     vel.y=0.0f;
     vel.z=0.0f;
 
-    for(pos.x=world_size.x*0.0f; pos.x<world_size.x*1.0; pos.x+=(kernel*0.5f))
-    {
-        for(pos.y=world_size.y*0.0f; pos.y<world_size.y*0.25f; pos.y+=(kernel*0.5f))
-        {
-            for(pos.z=world_size.z*0.0f; pos.z<world_size.z*1.0; pos.z+=(kernel*0.5f))
-            {
-                //phase, position and velocity
-                add_particle(2, pos, vel);
-            }
-        }
-    }
-
     //weird depth test for second set of particles, become completely transparent
     for(pos.x=world_size.x*0.0f+0.2; pos.x<world_size.x*0.4f+0.2; pos.x+=(kernel*0.5f))
     {
         for(pos.y=world_size.y*0.0f+0.3; pos.y<world_size.y*0.5f+0.3; pos.y+=(kernel*0.5f))
         {
             for(pos.z=world_size.z*0.0f+0.2; pos.z<world_size.z*0.4f+0.2; pos.z+=(kernel*0.5f))
+            {
+                //phase, position and velocity
+                add_particle(2, pos, vel);
+            }
+        }
+    }
+    for(pos.x=world_size.x*0.0f; pos.x<world_size.x*1.0; pos.x+=(kernel*0.5f))
+    {
+        for(pos.y=world_size.y*0.0f; pos.y<world_size.y*0.25f; pos.y+=(kernel*0.5f))
+        {
+            for(pos.z=world_size.z*0.0f; pos.z<world_size.z*1.0; pos.z+=(kernel*0.5f))
             {
                 //phase, position and velocity
                 add_particle(1, pos, vel);

@@ -25,4 +25,4 @@ DESTDIR=./
 
 macx:LIBS+= -framework OpenGL -framework GLUT -L/usr/local/lib -lglew
 
-linux: LIBS+= -lGLU -lGLEW
+linux: LIBS+= -lGLU -lGLEW -lglut
