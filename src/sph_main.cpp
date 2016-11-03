@@ -209,6 +209,7 @@ void render_particles()
                         sph->mem[i].pos.z*sim_ratio.z+real_world_origin.z);
 		glEnd();
     }
+
 }
 
 void display_func()

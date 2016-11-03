@@ -70,6 +70,8 @@ SPHSystem::SPHSystem()
 
 	sys_running=0;
 
+    misc=0;
+
     //first phase (liquid) - water - more dense, lower visc - less mass
     colour_1.x=0.2f;
     colour_1.y=0.8f;
@@ -128,24 +130,6 @@ void SPHSystem::animation()
 	advection();
 }
 
-/*void SPHSystem::updateParticles()
-{
-    Particle *p;
-    //glEnable(GL_DEPTH_TEST);
-    //glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-    //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    for(uint i=0; i<num_particle; i++)
-    {
-        p=&(mem[i]);
-        p->colour.x=1;
-        p->colour.y=0;
-        p->colour.z=0;
-
-        //glMaterialfv(GL_FRONT, GL_DIFFUSE, colour);
-    }
-}*/
-
 void SPHSystem::init_system()
 {
 	float3 pos;
@@ -161,8 +145,8 @@ void SPHSystem::init_system()
 		{
             for(pos.z=world_size.z*0.0f; pos.z<world_size.z*0.4f; pos.z+=(kernel*0.5f))
 			{
-                //added colour and density for both liquids
-                add_particle(pos, vel, colour_1, dens_1, individualMass_1, individualVisc_1, self_dens_1, self_lplc_color_1);
+                //phase, position and velocity
+                add_particle(1, pos, vel);
 			}
 		}
 	}
@@ -173,8 +157,8 @@ void SPHSystem::init_system()
         {
             for(pos.z=world_size.z*0.0f+0.4; pos.z<world_size.z*0.4f+0.4; pos.z+=(kernel*0.5f))
             {
-                //added colour and density for both liquids
-                add_particle(pos, vel, colour_2, dens_2, individualMass_2, individualVisc_2, self_dens_2, self_lplc_color_2);
+                //phase, position and velocity
+                add_particle(2, pos, vel);
             }
         }
     }
@@ -192,14 +176,17 @@ void SPHSystem::damnScenario()
     vel.y=0.0f;
     vel.z=0.0f;
 
+    volume_fraction_1=0.5;
+    volume_fraction_2=0.5;
+
     for(pos.x=world_size.x*0.0f; pos.x<world_size.x*0.2f; pos.x+=(kernel*0.5f))
     {
         for(pos.y=world_size.y*0.0f; pos.y<world_size.y*0.7f; pos.y+=(kernel*0.5f))
         {
             for(pos.z=world_size.z*0.0f+0.1; pos.z<world_size.z*0.7f+0.1; pos.z+=(kernel*0.5f))
             {
-                //added colour and density for both liquids
-                add_particle(pos, vel, colour_1, dens_1, individualMass_1, individualVisc_1, self_dens_1, self_lplc_color_1);
+                //phase, position and velocity
+                add_particle(1, pos, vel);
             }
         }
     }
@@ -210,8 +197,8 @@ void SPHSystem::damnScenario()
         {
             for(pos.z=world_size.z*0.0f+0.1; pos.z<world_size.z*0.7f+0.1; pos.z+=(kernel*0.5f))
             {
-                //added colour and density for both liquids
-                add_particle(pos, vel, colour_2, dens_2, individualMass_2, individualVisc_2, self_dens_2, self_lplc_color_2);
+                //phase, position and velocity
+                add_particle(2, pos, vel);
             }
         }
     }
@@ -235,8 +222,8 @@ void SPHSystem::dropScenario()
         {
             for(pos.z=world_size.z*0.0f; pos.z<world_size.z*1.0; pos.z+=(kernel*0.5f))
             {
-                //added colour and density for both liquids
-                add_particle(pos, vel, colour_2, dens_2, individualMass_2, individualVisc_2, self_dens_2, self_lplc_color_2);
+                //phase, position and velocity
+                add_particle(2, pos, vel);
             }
         }
     }
@@ -248,8 +235,8 @@ void SPHSystem::dropScenario()
         {
             for(pos.z=world_size.z*0.0f+0.2; pos.z<world_size.z*0.4f+0.2; pos.z+=(kernel*0.5f))
             {
-                //added colour and density for both liquids
-                add_particle(pos, vel, colour_1, dens_1, individualMass_1, individualVisc_1, self_dens_1, self_lplc_color_1);
+                //phase, position and velocity
+                add_particle(1, pos, vel);
             }
         }
     }
@@ -257,20 +244,40 @@ void SPHSystem::dropScenario()
     printf("Init Particle: %u\n", num_particle);
 }
 
-void SPHSystem::add_particle(float3 pos, float3 vel, float3 col, float density, float _mass, float _visc, float _selfDens, float _lplcColour)
+void SPHSystem::add_particle(int _phase, float3 pos, float3 vel)
 {
 	Particle *p=&(mem[num_particle]);
 
 	p->id=num_particle;
 
-	p->pos=pos;
-	p->vel=vel;
-    p->colour=col;
+    if(_phase==1)
+    {
+        p->pos=pos;
+        p->vel=vel;
+        p->colour=colour_1;
+        p->mass=individualMass_1;
+        p->visc=individualVisc_1;
+        p->selfDens=self_dens_1;
+        p->lplcColour=self_lplc_color_1;
 
-    p->mass=_mass;
-    p->visc=_visc;
-    p->selfDens=_selfDens;
-    p->lplcColour=_lplcColour;
+        //individual rest densities for each phase
+        p->restdens=dens_1;
+        p->dens=p->restdens;
+    }
+    else if(_phase==2)
+    {
+        p->pos=pos;
+        p->vel=vel;
+        p->colour=colour_2;
+        p->mass=individualMass_2;
+        p->visc=individualVisc_2;
+        p->selfDens=self_dens_2;
+        p->lplcColour=self_lplc_color_2;
+
+        //individual rest densities for each phase
+        p->restdens=dens_2;
+        p->dens=p->restdens;
+    }
 
 	p->acc.x=0.0f;
 	p->acc.y=0.0f;
@@ -278,10 +285,9 @@ void SPHSystem::add_particle(float3 pos, float3 vel, float3 col, float density, 
 	p->ev.x=0.0f;
 	p->ev.y=0.0f;
 	p->ev.z=0.0f;
-
-    p->dens=p->restdens;
-    //individual rest densities for each phase
-    p->restdens=density;
+    p->driftVelocity.x=0.0f;
+    p->driftVelocity.y=0.0f;
+    p->driftVelocity.z=0.0f;
 
 	p->pres=0.0f;
 
@@ -416,6 +422,10 @@ void SPHSystem::comp_force_adv()
 		p->acc.y=0.0f;
 		p->acc.z=0.0f;
 
+        p->driftVelocity.x=0.0f;
+        p->driftVelocity.y=0.0f;
+        p->driftVelocity.z=0.0f;
+
 		grad_color.x=0.0f;
 		grad_color.y=0.0f;
 		grad_color.z=0.0f;
@@ -452,7 +462,7 @@ void SPHSystem::comp_force_adv()
 							kernel_r=kernel-r;
 
 							pres_kernel=spiky_value * kernel_r * kernel_r;
-							temp_force=V * (p->pres+np->pres) * pres_kernel;
+                            temp_force=V * (p->pres+np->pres) * pres_kernel;
 							p->acc.x=p->acc.x-rel_pos.x*temp_force/r;
 							p->acc.y=p->acc.y-rel_pos.y*temp_force/r;
 							p->acc.z=p->acc.z-rel_pos.z*temp_force/r;
@@ -480,6 +490,47 @@ void SPHSystem::comp_force_adv()
 			}
 		}
 
+        //DRIFT VELOCITY
+        //user constants
+        float strengthFac=0.000001f;
+        float diffuseConst=0.0001f;
+
+        float pressureRelationship;
+        if(misc==1)
+        {
+            pressureRelationship=1;
+        }
+        else if(misc==0)
+        {
+            pressureRelationship=0;
+        }
+
+        if(p->phase==1)
+        {
+            //volume fraction may have to be for individual particle
+            float sum=(volume_fraction_1*p->dens/(volume_fraction_1*dens_1))*p->dens;
+            float thirdPhase=(volume_fraction_1/volume_fraction_1)-(volume_fraction_1*p->dens/volume_fraction_1*dens_1)*(volume_fraction_1/volume_fraction_1);
+            //drift velocity - second phase is where pressure relationship will affect the misc/immiscibility of the mixture
+            p->driftVelocity.x=(strengthFac*(dens_1-sum)*p->acc.x)-(strengthFac*pressureRelationship*(dens_1-sum)-diffuseConst*thirdPhase);
+            p->driftVelocity.y=(strengthFac*(dens_1-sum)*p->acc.x)-(strengthFac*pressureRelationship*(dens_1-sum)-diffuseConst*thirdPhase);
+            p->driftVelocity.z=(strengthFac*(dens_1-sum)*p->acc.y)-(strengthFac*pressureRelationship*(dens_1-sum)-diffuseConst*thirdPhase);
+        }
+        else if(p->phase==2)
+        {
+            //volume fraction may have to be for individual particle
+            float sum=(volume_fraction_2*p->dens/(volume_fraction_2*dens_2))*p->dens;
+            float thirdPhase=(volume_fraction_2/volume_fraction_2)-(volume_fraction_2*p->dens/volume_fraction_2*dens_2)*(volume_fraction_2/volume_fraction_2);
+            //drift velocity - second phase is where pressure relationship will affect the misc/immiscibility of the mixture
+            p->driftVelocity.x=strengthFac*(dens_2-sum)*p->acc.x-(strengthFac*pressureRelationship*(dens_2-sum)-diffuseConst*thirdPhase);
+            p->driftVelocity.y=strengthFac*(dens_2-sum)*p->acc.x-(strengthFac*pressureRelationship*(dens_2-sum)-diffuseConst*thirdPhase);
+            p->driftVelocity.z=strengthFac*(dens_2-sum)*p->acc.y-(strengthFac*pressureRelationship*(dens_2-sum)-diffuseConst*thirdPhase);
+
+        }
+
+        //p->driftVelocity.x=0.007;
+        //p->driftVelocity.y=0.007;
+        //p->driftVelocity.z=0.007;
+
         lplc_color+=p->lplcColour/p->dens;
 		p->surf_norm=sqrt(grad_color.x*grad_color.x+grad_color.y*grad_color.y+grad_color.z*grad_color.z);
 
@@ -495,13 +546,15 @@ void SPHSystem::comp_force_adv()
 void SPHSystem::advection()
 {
 	Particle *p;
+
 	for(uint i=0; i<num_particle; i++)
 	{
 		p=&(mem[i]);
 
-		p->vel.x=p->vel.x+p->acc.x*time_step/p->dens+gravity.x*time_step;
-		p->vel.y=p->vel.y+p->acc.y*time_step/p->dens+gravity.y*time_step;
-		p->vel.z=p->vel.z+p->acc.z*time_step/p->dens+gravity.z*time_step;
+        //potentially add drift velocity in with this step
+        p->vel.x=p->vel.x+p->driftVelocity.x+p->acc.x*time_step/p->dens+gravity.x*time_step;
+        p->vel.y=p->vel.y+p->driftVelocity.y+p->acc.y*time_step/p->dens+gravity.y*time_step;
+        p->vel.z=p->vel.z+p->driftVelocity.z+p->acc.z*time_step/p->dens+gravity.z*time_step;
 
 		p->pos.x=p->pos.x+p->vel.x*time_step;
 		p->pos.y=p->pos.y+p->vel.y*time_step;
