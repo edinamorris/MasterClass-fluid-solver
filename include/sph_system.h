@@ -133,6 +133,7 @@ private:
 	void build_table();
 	void comp_dens_pres();
 	void comp_force_adv();
+    void driftVelocity();
 	void advection();
 
 private:
