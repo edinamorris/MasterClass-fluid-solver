@@ -27,72 +27,50 @@
 #include "sph_type.h"
 #include "vector"
 #include "vec3.h"
-
-class Particle
-{
-public:
-	uint id;
-    vec3 pos;
-    vec3 vel;
-    vec3 acc;
-    vec3 ev;
-    vec3 colour;
-    int phase;
-    vec3 driftVelocity;
-
-    //made these individual for each particle
-    float visc;
-    float mass;
-    float selfDens;
-    float lplcColour;
-    float volFrac;
-
-	float dens;
-    //individual phase density for liquids
-    float restdens;
-	float pres;
-
-	float surf_norm;
-
-    //neighbour vector
-    std::vector<Particle*> neighbour;
-
-	Particle *next;
-};
+#include "sph_particle.h"
 
 class SPHSystem
 {
 public:
-	uint max_particle;
-	uint num_particle;
-    uint phase1Particle;
-    uint phase2Particle;
+	SPHSystem();
+	~SPHSystem();
 
-	float kernel;
+    //accessors
+    uint getNumPart(){return num_particle;}
+    vec3 getWorldSize(){return world_size;}
+    uint getSysRunning(){return sys_running;}
 
+    //mutators
+    void setSysRunning(uint _sysRun){sys_running=_sysRun;}
+
+    Particle *mem;
+    Particle **cell;
+
+	void animation();
+    void loadScenario(int _scenario);
+	void init_system();
+    void damnScenario();
+    void dropScenario();
+    void add_particle(int _phase, vec3 pos, vec3 vel);
+    //returns gradient
+    vec3 poly6Grad(vec3 _iPos, vec3 _jPos);
+    vec3 spikyGrad(vec3 _iPos, vec3 _jPos);
+
+    //functions
+private:
+	void build_table();
+	void comp_dens_pres();
+	void comp_force_adv();
+    void driftVelocity();
+	void advection();
+
+    //variables
+private:
+    uint num_particle;
     vec3 world_size;
-	float cell_size;
-	uint3 grid_size;
-	uint tot_cell;
-
-    vec3 gravity;
-	float wall_damping;
-	float gas_constant;
-	float time_step;
-	float surf_norm;
-	float surf_coe;
-
-	float poly6_value;
-	float spiky_value;
-	float visco_value;
-
-	float grad_poly6;
-    float grad_spiky;
-	float lplc_poly6;
-
-	float kernel_2;
-
-    int misc;
+    uint sys_running;
+    int3 calc_cell_pos(vec3 p);
+	uint calc_cell_hash(int3 cell_pos);
 
     //phase 1
     vec3 colour_1;
@@ -112,33 +90,35 @@ public:
     float dens_2;
     float volume_fraction_2;
 
-	Particle *mem;
-	Particle **cell;
+    float poly6_value;
+    float spiky_value;
+    float visco_value;
 
-	uint sys_running;
+    float grad_poly6;
+    float grad_spiky;
+    float lplc_poly6;
+    uint max_particle;
 
-public:
-	SPHSystem();
-	~SPHSystem();
-	void animation();
-	void init_system();
-    void damnScenario();
-    void dropScenario();
-    void add_particle(int _phase, vec3 pos, vec3 vel);
-    //returns gradient
-    vec3 poly6Grad(vec3 _iPos, vec3 _jPos);
-    vec3 spikyGrad(vec3 _iPos, vec3 _jPos);
+    //count for both phases - temp
+    uint phase1Particle;
+    uint phase2Particle;
 
-private:
-	void build_table();
-	void comp_dens_pres();
-	void comp_force_adv();
-    void driftVelocity();
-	void advection();
+    float kernel;
 
-private:
-    int3 calc_cell_pos(vec3 p);
-	uint calc_cell_hash(int3 cell_pos);
+    float cell_size;
+    uint3 grid_size;
+    uint tot_cell;
+
+    vec3 gravity;
+    float wall_damping;
+    float gas_constant;
+    float time_step;
+    float surf_norm;
+    float surf_coe;
+
+    float kernel_2;
+
+    int misc;
 };
 
 #endif

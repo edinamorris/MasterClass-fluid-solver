@@ -170,7 +170,6 @@ void init_sph_system()
     real_world_side.z=8.0f;
 
 	sph=new SPHSystem();
-    //sph->init_system();
 }
 
 void init()
@@ -189,16 +188,16 @@ void init()
 
 void init_ratio()
 {
-	sim_ratio.x=real_world_side.x/sph->world_size.x;
-	sim_ratio.y=real_world_side.y/sph->world_size.y;
-	sim_ratio.z=real_world_side.z/sph->world_size.z;
+    sim_ratio.x=real_world_side.x/sph->getWorldSize().x;
+    sim_ratio.y=real_world_side.y/sph->getWorldSize().y;
+    sim_ratio.z=real_world_side.z/sph->getWorldSize().z;
 }
 
 void render_particles()
 {
     glPointSize(1.0f);
 
-    for(uint i=0; i<sph->num_particle; i++)
+    for(uint i=0; i<sph->getNumPart(); i++)
     {
         glBegin(GL_POINTS);
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -274,20 +273,25 @@ void keyboard_func(unsigned char key, int x, int y)
 {
 	if(key == ' ')
 	{
-		sph->sys_running=1-sph->sys_running;
+        sph->setSysRunning(1-sph->getSysRunning());
 	}
-
+    //waves
     if(key == '1')
     {
-        sph->init_system();
+        sph->loadScenario(1);
+        //sph->init_system();
     }
+    //dam
     if(key == '2' )
     {
-        sph->damnScenario();
+        sph->loadScenario(2);
+        //sph->damnScenario();
     }
+    //drop
     if(key == '3')
     {
-        sph->dropScenario();
+        sph->loadScenario(3);
+        //sph->dropScenario();
     }
 	if(key == 'w')
 	{
@@ -379,7 +383,7 @@ int main(int argc, char **argv)
     glutInitWindowSize(window_width, window_height);
     glutCreateWindow("SPH Fluid 3D");
 
-	init_sph_system();
+    init_sph_system();
 	init();
 	init_ratio();
 	set_shaders();

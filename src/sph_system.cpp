@@ -69,7 +69,6 @@ SPHSystem::SPHSystem()
 
 	kernel_2=kernel*kernel;
 
-	mem=(Particle *)malloc(sizeof(Particle)*max_particle);
 	cell=(Particle **)malloc(sizeof(Particle *)*tot_cell);
 
 	sys_running=0;
@@ -136,132 +135,148 @@ void SPHSystem::animation()
 	advection();
 }
 
-void SPHSystem::init_system()
+void SPHSystem::loadScenario(int _scenario)
 {
-    vec3 pos;
-    vec3 vel;
-
-	vel.x=0.0f;
-	vel.y=0.0f;
-	vel.z=0.0f;
-
-    for(pos.x=world_size.x*0.0f; pos.x<world_size.x*0.4f; pos.x+=(kernel*0.5f))
-	{
-        for(pos.y=world_size.y*0.0f; pos.y<world_size.y*0.7f; pos.y+=(kernel*0.5f))
-		{
-            for(pos.z=world_size.z*0.0f; pos.z<world_size.z*0.4f; pos.z+=(kernel*0.5f))
-			{
-                //phase, position and velocity
-                add_particle(1, pos, vel);
-			}
-		}
-	}
-
-    for(pos.x=world_size.x*0.0f; pos.x<world_size.x*0.4f; pos.x+=(kernel*0.5f))
+    //remove any particles
+    if(num_particle>0)
     {
-        for(pos.y=world_size.y*0.0f; pos.y<world_size.y*0.7f; pos.y+=(kernel*0.5f))
-        {
-            for(pos.z=world_size.z*0.0f+0.4; pos.z<world_size.z*0.4f+0.4; pos.z+=(kernel*0.5f))
-            {
-                //phase, position and velocity
-                add_particle(2, pos, vel);
-            }
-        }
+        free(mem);
     }
 
+    //reset variables
+    num_particle=0;
+    phase1Particle=0;
+    phase2Particle=0;
 
-
-    volume_fraction_1=phase1Particle/num_particle;
-    volume_fraction_2=phase2Particle/num_particle;
-
-	printf("Init Particle: %u\n", num_particle);
-}
-
-//blue lower density
-void SPHSystem::damnScenario()
-{
-    vec3 pos;
-    vec3 vel;
-
-    vel.x=0.0f;
-    vel.y=0.0f;
-    vel.z=0.0f;
-
-    for(pos.x=world_size.x*0.0f; pos.x<world_size.x*0.2f; pos.x+=(kernel*0.5f))
+    //waves
+    if(_scenario==1)
     {
-        for(pos.y=world_size.y*0.0f; pos.y<world_size.y*0.7f; pos.y+=(kernel*0.5f))
+        mem=(Particle *)malloc(sizeof(Particle)*max_particle);
+        vec3 pos;
+        vec3 vel;
+
+        vel.x=0.0f;
+        vel.y=0.0f;
+        vel.z=0.0f;
+
+        for(pos.x=world_size.x*0.0f; pos.x<world_size.x*0.4f; pos.x+=(kernel*0.5f))
         {
-            for(pos.z=world_size.z*0.0f+0.1; pos.z<world_size.z*0.7f+0.1; pos.z+=(kernel*0.5f))
+            for(pos.y=world_size.y*0.0f; pos.y<world_size.y*0.7f; pos.y+=(kernel*0.5f))
             {
-                //phase, position and velocity
-                add_particle(1, pos, vel);
+                for(pos.z=world_size.z*0.0f; pos.z<world_size.z*0.4f; pos.z+=(kernel*0.5f))
+                {
+                    //phase, position and velocity
+                    add_particle(1, pos, vel);
+                }
             }
         }
-    }
 
-    for(pos.x=world_size.x*0.0f+0.5; pos.x<world_size.x*0.2f+0.5; pos.x+=(kernel*0.5f))
-    {
-        for(pos.y=world_size.y*0.0f; pos.y<world_size.y*0.7f; pos.y+=(kernel*0.5f))
+        for(pos.x=world_size.x*0.0f; pos.x<world_size.x*0.4f; pos.x+=(kernel*0.5f))
         {
-            for(pos.z=world_size.z*0.0f+0.1; pos.z<world_size.z*0.7f+0.1; pos.z+=(kernel*0.5f))
+            for(pos.y=world_size.y*0.0f; pos.y<world_size.y*0.7f; pos.y+=(kernel*0.5f))
             {
-                //phase, position and velocity
-                add_particle(2, pos, vel);
+                for(pos.z=world_size.z*0.0f+0.4; pos.z<world_size.z*0.4f+0.4; pos.z+=(kernel*0.5f))
+                {
+                    //phase, position and velocity
+                    add_particle(2, pos, vel);
+                }
             }
         }
+
+
+
+        volume_fraction_1=phase1Particle/num_particle;
+        volume_fraction_2=phase2Particle/num_particle;
+
+        printf("Init Particle: %u\n", num_particle);
     }
-
-    volume_fraction_1=phase1Particle/num_particle;
-    volume_fraction_2=phase2Particle/num_particle;
-
-    printf("Init Particle: %u\n", num_particle);
-}
-
-//blue = bottom, purple = drop
-void SPHSystem::dropScenario()
-{
-    vec3 pos;
-    vec3 vel;
-
-    vel.x=0.0f;
-    vel.y=0.0f;
-    vel.z=0.0f;
-
-    //weird depth test for second set of particles, become completely transparent
-    for(pos.x=world_size.x*0.0f+0.2; pos.x<world_size.x*0.4f+0.2; pos.x+=(kernel*0.5f))
+    //damn
+    else if(_scenario==2)
     {
-        for(pos.y=world_size.y*0.0f+0.3; pos.y<world_size.y*0.5f+0.3; pos.y+=(kernel*0.5f))
+        mem=(Particle *)malloc(sizeof(Particle)*max_particle);
+        vec3 pos;
+        vec3 vel;
+
+        vel.x=0.0f;
+        vel.y=0.0f;
+        vel.z=0.0f;
+
+        for(pos.x=world_size.x*0.0f; pos.x<world_size.x*0.2f; pos.x+=(kernel*0.5f))
         {
-            for(pos.z=world_size.z*0.0f+0.2; pos.z<world_size.z*0.4f+0.2; pos.z+=(kernel*0.5f))
+            for(pos.y=world_size.y*0.0f; pos.y<world_size.y*0.7f; pos.y+=(kernel*0.5f))
             {
-                //phase, position and velocity
-                add_particle(2, pos, vel);
+                for(pos.z=world_size.z*0.0f+0.1; pos.z<world_size.z*0.7f+0.1; pos.z+=(kernel*0.5f))
+                {
+                    //phase, position and velocity
+                    add_particle(1, pos, vel);
+                }
             }
         }
-    }
-    for(pos.x=world_size.x*0.0f; pos.x<world_size.x*1.0; pos.x+=(kernel*0.5f))
-    {
-        for(pos.y=world_size.y*0.0f; pos.y<world_size.y*0.25f; pos.y+=(kernel*0.5f))
+
+        for(pos.x=world_size.x*0.0f+0.5; pos.x<world_size.x*0.2f+0.5; pos.x+=(kernel*0.5f))
         {
-            for(pos.z=world_size.z*0.0f; pos.z<world_size.z*1.0; pos.z+=(kernel*0.5f))
+            for(pos.y=world_size.y*0.0f; pos.y<world_size.y*0.7f; pos.y+=(kernel*0.5f))
             {
-                //phase, position and velocity
-                add_particle(1, pos, vel);
+                for(pos.z=world_size.z*0.0f+0.1; pos.z<world_size.z*0.7f+0.1; pos.z+=(kernel*0.5f))
+                {
+                    //phase, position and velocity
+                    add_particle(2, pos, vel);
+                }
             }
         }
+
+        volume_fraction_1=phase1Particle/num_particle;
+        volume_fraction_2=phase2Particle/num_particle;
+
+        printf("Init Particle: %u\n", num_particle);
     }
+    //drop simulation
+    else if(_scenario==3)
+    {
+        mem=(Particle *)malloc(sizeof(Particle)*max_particle);
+        vec3 pos;
+        vec3 vel;
 
-    volume_fraction_1=phase1Particle/num_particle;
-    volume_fraction_2=phase2Particle/num_particle;
+        vel.x=0.0f;
+        vel.y=0.0f;
+        vel.z=0.0f;
 
-    printf("Init Particle: %u\n", num_particle);
+        //weird depth test for second set of particles, become completely transparent
+        for(pos.x=world_size.x*0.0f+0.2; pos.x<world_size.x*0.4f+0.2; pos.x+=(kernel*0.5f))
+        {
+            for(pos.y=world_size.y*0.0f+0.3; pos.y<world_size.y*0.5f+0.3; pos.y+=(kernel*0.5f))
+            {
+                for(pos.z=world_size.z*0.0f+0.2; pos.z<world_size.z*0.4f+0.2; pos.z+=(kernel*0.5f))
+                {
+                    //phase, position and velocity
+                    add_particle(1, pos, vel);
+                }
+            }
+        }
+        for(pos.x=world_size.x*0.0f; pos.x<world_size.x*1.0; pos.x+=(kernel*0.5f))
+        {
+            for(pos.y=world_size.y*0.0f; pos.y<world_size.y*0.25f; pos.y+=(kernel*0.5f))
+            {
+                for(pos.z=world_size.z*0.0f; pos.z<world_size.z*1.0; pos.z+=(kernel*0.5f))
+                {
+                    //phase, position and velocity
+                    add_particle(2, pos, vel);
+                }
+            }
+        }
+
+        volume_fraction_1=phase1Particle/num_particle;
+        volume_fraction_2=phase2Particle/num_particle;
+
+        printf("Init Particle: %u\n", num_particle);
+    }
 }
 
 void SPHSystem::add_particle(int _phase, vec3 pos, vec3 vel)
 {
-	Particle *p=&(mem[num_particle]);
+    Particle *p=&(mem[num_particle]);
 
-	p->id=num_particle;
+    p->id=num_particle;
 
     if(_phase==1)
     {
@@ -291,20 +306,20 @@ void SPHSystem::add_particle(int _phase, vec3 pos, vec3 vel)
         phase2Particle++;
     }
 
-	p->acc.x=0.0f;
-	p->acc.y=0.0f;
-	p->acc.z=0.0f;
-	p->ev.x=0.0f;
-	p->ev.y=0.0f;
-	p->ev.z=0.0f;
+    p->acc.x=0.0f;
+    p->acc.y=0.0f;
+    p->acc.z=0.0f;
+    p->ev.x=0.0f;
+    p->ev.y=0.0f;
+    p->ev.z=0.0f;
     p->driftVelocity.x=0.0f;
     p->driftVelocity.y=0.0f;
     p->driftVelocity.z=0.0f;
-	p->pres=0.0f;
+    p->pres=0.0f;
 
-	p->next=NULL;
+    p->next=NULL;
 
-	num_particle++;
+    num_particle++;
 }
 
 void SPHSystem::build_table()
