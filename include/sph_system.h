@@ -79,34 +79,12 @@ private:
     int3 calc_cell_pos(vec3 p);
 	uint calc_cell_hash(int3 cell_pos);
 
-    //phase 1
-    /*vec3 colour_1;
-    float individualMass_1;
-    float individualVisc_1;
-    float self_dens_1;
-    float self_lplc_color_1;
-    float dens_1;
-    float volume_fraction_1;
-
-    //phase 2
-    vec3 colour_2;
-    float individualMass_2;
-    float individualVisc_2;
-    float self_dens_2;
-    float self_lplc_color_2;
-    float dens_2;
-    float volume_fraction_2;*/
-
     float spiky_value;
     float visco_value;
 
     float grad_poly6;
     float grad_spiky;
     uint max_particle;
-
-    //count for both phases - temp
-    //uint phase1Particle;
-    //uint phase2Particle;
 
     float cell_size;
     uint3 grid_size;

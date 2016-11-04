@@ -25,6 +25,9 @@ public:
     Phase *phases = new Phase[system.getNumPhases()];
 
     int getNumberOfParticles(int _phase){return phases[_phase].numberOfParticles;}
+    float getVolumeFraction(int _phase){return phases[_phase].volumeFraction;}
+    float getDensity(int _phase){return phases[_phase].dens;}
+    float getMass(int _phase){return phases[_phase].individualMass;}
     void addParticle(int _phase){phases[_phase].numberOfParticles+=1;}
 
     //need to have these updated after all particles have been added
