@@ -22,6 +22,7 @@
 #include "sph_system.h"
 #include "sph_header.h"
 #include "vec3.h"
+#include "sph_phasedata.h"
 
 #ifdef __APPLE__
 #include <GLUT/glut.h>
@@ -30,12 +31,12 @@
 #include <GL/glut.h>
 #endif
 
+phaseData updatePhases;
+
 SPHSystem::SPHSystem()
 {
     max_particle=30000;
 	num_particle=0;
-    phase1Particle=0;
-    phase2Particle=0;
 
     //h
     kernel=0.04f;
@@ -54,6 +55,8 @@ SPHSystem::SPHSystem()
 	gravity.z=0.0f;
 	wall_damping=-0.5f;
     gas_constant=1.0f;
+
+    numberOfPhases=2;
 
 	time_step=0.003f;
 	surf_norm=6.0f;
@@ -77,7 +80,7 @@ SPHSystem::SPHSystem()
     misc=1;
 
     //first phase (liquid) - water - more dense, lower visc - less mass
-    colour_1.x=0.2f;
+    /*colour_1.x=0.2f;
     colour_1.y=0.8f;
     colour_1.z=1.0f;
     //seperate values for each phase
@@ -98,7 +101,7 @@ SPHSystem::SPHSystem()
     self_dens_2=individualMass_2*poly6_value*pow(kernel, 6);
     self_lplc_color_2=lplc_poly6*individualMass_2*kernel_2*(0-3/4*kernel_2);
     //change rest density value individually - different liquids
-    dens_2=1000;
+    dens_2=1000;*/
 
 	printf("Initialize SPH:\n");
 	printf("World Width : %f\n", world_size.x);
@@ -131,7 +134,7 @@ void SPHSystem::animation()
 	build_table();
 	comp_dens_pres();
 	comp_force_adv();
-    driftVelocity();
+    //driftVelocity();
 	advection();
 }
 
@@ -145,13 +148,17 @@ void SPHSystem::loadScenario(int _scenario)
 
     //reset variables
     num_particle=0;
-    phase1Particle=0;
-    phase2Particle=0;
+    for(int i=0; i<numberOfPhases; i++)
+    {
+        updatePhases.setNumberOfParticles(0,i);
+    }
 
     //waves
     if(_scenario==1)
     {
         mem=(Particle *)malloc(sizeof(Particle)*max_particle);
+        phases=(Particle **)malloc(sizeof(Particle *)*numberOfPhases);
+
         vec3 pos;
         vec3 vel;
 
@@ -166,7 +173,7 @@ void SPHSystem::loadScenario(int _scenario)
                 for(pos.z=world_size.z*0.0f; pos.z<world_size.z*0.4f; pos.z+=(kernel*0.5f))
                 {
                     //phase, position and velocity
-                    add_particle(1, pos, vel);
+                    add_particle(0, pos, vel);
                 }
             }
         }
@@ -178,15 +185,17 @@ void SPHSystem::loadScenario(int _scenario)
                 for(pos.z=world_size.z*0.0f+0.4; pos.z<world_size.z*0.4f+0.4; pos.z+=(kernel*0.5f))
                 {
                     //phase, position and velocity
-                    add_particle(2, pos, vel);
+                    add_particle(1, pos, vel);
                 }
             }
         }
 
-
-
-        volume_fraction_1=phase1Particle/num_particle;
-        volume_fraction_2=phase2Particle/num_particle;
+        for(int i=0; i<numberOfPhases; i++)
+        {
+            int numParticlePhase = updatePhases.getNumberOfParticles(i);
+            int volumeFraction=numParticlePhase/num_particle;
+            updatePhases.setVolumeFraction(volumeFraction, i);
+        }
 
         printf("Init Particle: %u\n", num_particle);
     }
@@ -194,6 +203,8 @@ void SPHSystem::loadScenario(int _scenario)
     else if(_scenario==2)
     {
         mem=(Particle *)malloc(sizeof(Particle)*max_particle);
+        phases=(Particle **)malloc(sizeof(Particle *)*numberOfPhases);
+
         vec3 pos;
         vec3 vel;
 
@@ -208,7 +219,7 @@ void SPHSystem::loadScenario(int _scenario)
                 for(pos.z=world_size.z*0.0f+0.1; pos.z<world_size.z*0.7f+0.1; pos.z+=(kernel*0.5f))
                 {
                     //phase, position and velocity
-                    add_particle(1, pos, vel);
+                    add_particle(0, pos, vel);
                 }
             }
         }
@@ -220,13 +231,17 @@ void SPHSystem::loadScenario(int _scenario)
                 for(pos.z=world_size.z*0.0f+0.1; pos.z<world_size.z*0.7f+0.1; pos.z+=(kernel*0.5f))
                 {
                     //phase, position and velocity
-                    add_particle(2, pos, vel);
+                    add_particle(1, pos, vel);
                 }
             }
         }
 
-        volume_fraction_1=phase1Particle/num_particle;
-        volume_fraction_2=phase2Particle/num_particle;
+        for(int i=0; i<numberOfPhases; i++)
+        {
+            int numParticlePhase = updatePhases.getNumberOfParticles(i);
+            int volumeFraction=numParticlePhase/num_particle;
+            updatePhases.setVolumeFraction(volumeFraction, i);
+        }
 
         printf("Init Particle: %u\n", num_particle);
     }
@@ -234,6 +249,8 @@ void SPHSystem::loadScenario(int _scenario)
     else if(_scenario==3)
     {
         mem=(Particle *)malloc(sizeof(Particle)*max_particle);
+        phases=(Particle **)malloc(sizeof(Particle *)*numberOfPhases);
+
         vec3 pos;
         vec3 vel;
 
@@ -249,7 +266,7 @@ void SPHSystem::loadScenario(int _scenario)
                 for(pos.z=world_size.z*0.0f+0.2; pos.z<world_size.z*0.4f+0.2; pos.z+=(kernel*0.5f))
                 {
                     //phase, position and velocity
-                    add_particle(1, pos, vel);
+                    add_particle(0, pos, vel);
                 }
             }
         }
@@ -260,51 +277,43 @@ void SPHSystem::loadScenario(int _scenario)
                 for(pos.z=world_size.z*0.0f; pos.z<world_size.z*1.0; pos.z+=(kernel*0.5f))
                 {
                     //phase, position and velocity
-                    add_particle(2, pos, vel);
+                    add_particle(1, pos, vel);
                 }
             }
         }
 
-        volume_fraction_1=phase1Particle/num_particle;
-        volume_fraction_2=phase2Particle/num_particle;
+        for(int i=0; i<numberOfPhases; i++)
+        {
+            int numParticlePhase = updatePhases.getNumberOfParticles(i);
+            int volumeFraction=numParticlePhase/num_particle;
+            updatePhases.setVolumeFraction(volumeFraction, i);
+        }
 
         printf("Init Particle: %u\n", num_particle);
     }
 }
 
+//changing sp particles get added into lists
 void SPHSystem::add_particle(int _phase, vec3 pos, vec3 vel)
 {
-    Particle *p=&(mem[num_particle]);
+    Particle *p;
+    p=&(mem[num_particle]);
 
+    //phases[_phase]=NULL;
     p->id=num_particle;
 
-    if(_phase==1)
-    {
-        p->pos=pos;
-        p->vel=vel;
-        p->colour=colour_1;
-        p->mass=individualMass_1;
-        p->visc=individualVisc_1;
-        p->selfDens=self_dens_1;
-        p->lplcColour=self_lplc_color_1;
-        p->restdens=dens_1;
-        p->dens=p->restdens;
-
-        phase1Particle++;
-    }
-    else if(_phase==2)
-    {
-        p->pos=pos;
-        p->vel=vel;
-        p->colour=colour_2;
-        p->mass=individualMass_2;
-        p->visc=individualVisc_2;
-        p->selfDens=self_dens_2;
-        p->lplcColour=self_lplc_color_2;
-        p->restdens=dens_2;
-        p->dens=p->restdens;
-        phase2Particle++;
-    }
+    p->pos=pos;
+    p->vel=vel;
+    //set values based on preset phase data
+    p->colour=updatePhases.phases[_phase].colour;
+    p->mass=updatePhases.phases[_phase].individualMass;
+    p->visc=updatePhases.phases[_phase].individualVisc;
+    p->selfDens=updatePhases.phases[_phase].selfDens;
+    p->lplcColour=updatePhases.phases[_phase].self_lplc_color;
+    p->restdens=updatePhases.phases[_phase].dens;
+    p->dens=p->restdens;
+    //adding to the phase counter
+    updatePhases.addParticle(_phase);
 
     p->acc.x=0.0f;
     p->acc.y=0.0f;
@@ -319,12 +328,17 @@ void SPHSystem::add_particle(int _phase, vec3 pos, vec3 vel)
 
     p->next=NULL;
 
+    //adding p to the phases list
+    //phases[_phase]=p;
+
+    //still add one to overall count
     num_particle++;
 }
 
 void SPHSystem::build_table()
 {
-	Particle *p;
+    Particle *p;
+    //Particle **pp;
 	uint hash;
 
 	for(uint i=0; i<tot_cell; i++)
@@ -332,28 +346,30 @@ void SPHSystem::build_table()
 		cell[i]=NULL;
 	}
 
-	for(uint i=0; i<num_particle; i++)
-	{
-		p=&(mem[i]);
-		hash=calc_cell_hash(calc_cell_pos(p->pos));
+        for(uint j=0; j<num_particle; j++)
+        {
+            p=&(mem[j]);
+            //pp[j]->pos;
+            hash=calc_cell_hash(calc_cell_pos(p->pos));
 
-		if(cell[hash] == NULL)
-		{
-			p->next=NULL;
-			cell[hash]=p;
-		}
-		else
-		{
-			p->next=cell[hash];
-			cell[hash]=p;
-		}
-	}
+            if(cell[hash] == NULL)
+            {
+                p->next=NULL;
+                cell[hash]=p;
+            }
+            else
+            {
+                p->next=cell[hash];
+                cell[hash]=p;
+            }
+        }
 }
 
 void SPHSystem::comp_dens_pres()
 {
 	Particle *p;
 	Particle *np;
+    Particle **pp;
 
 	int3 cell_pos;
 	int3 near_pos;
@@ -366,17 +382,6 @@ void SPHSystem::comp_dens_pres()
 	{
 		p=&(mem[i]); 
 		cell_pos=calc_cell_pos(p->pos);
-
-        //setting up particle's volume fraction - volume fraction will change during sim so need to update how many particles are in each phase
-        //p->volFrac=1/num_particle;
-        if(p->phase==1)
-        {
-            p->volFrac=1/phase1Particle;
-        }
-        else if(p->phase==2)
-        {
-            p->volFrac=1/phase2Particle;
-        }
 
 		p->dens=0.0f;
 		p->pres=0.0f;
@@ -551,7 +556,7 @@ void SPHSystem::driftVelocity()
     for(uint i=0; i<num_particle; i++)
     {
         p=&(mem[i]);
-        //DRIFT VELOCITY - Need to change design so it's not reliant on just two phases also move to own function after acceleration implementation
+        //DRIFT VELOCITY - Need to change design so it's not reliant on just two phases
         //user constants
         //float strengthFac=0.000001f;
         float diffuseConst=0.0001f;

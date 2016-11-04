@@ -203,8 +203,8 @@ void render_particles()
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glColor3f(sph->mem[i].colour.x, sph->mem[i].colour.y, sph->mem[i].colour.z);
-			glVertex3f(sph->mem[i].pos.x*sim_ratio.x+real_world_origin.x, 
-						sph->mem[i].pos.y*sim_ratio.y+real_world_origin.y,
+            glVertex3f(sph->mem[i].pos.x*sim_ratio.x+real_world_origin.x,
+                        sph->mem[i].pos.y*sim_ratio.y+real_world_origin.y,
                         sph->mem[i].pos.z*sim_ratio.z+real_world_origin.z);
         glEnd();
     }

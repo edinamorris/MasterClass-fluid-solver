@@ -39,12 +39,18 @@ public:
     uint getNumPart(){return num_particle;}
     vec3 getWorldSize(){return world_size;}
     uint getSysRunning(){return sys_running;}
+    int getNumPhases(){return numberOfPhases;}
 
     //mutators
     void setSysRunning(uint _sysRun){sys_running=_sysRun;}
 
     Particle *mem;
     Particle **cell;
+    Particle **phases;
+    float poly6_value;
+    float lplc_poly6;
+    float kernel;
+    float kernel_2;
 
 	void animation();
     void loadScenario(int _scenario);
@@ -67,13 +73,14 @@ private:
     //variables
 private:
     uint num_particle;
+    int numberOfPhases;
     vec3 world_size;
     uint sys_running;
     int3 calc_cell_pos(vec3 p);
 	uint calc_cell_hash(int3 cell_pos);
 
     //phase 1
-    vec3 colour_1;
+    /*vec3 colour_1;
     float individualMass_1;
     float individualVisc_1;
     float self_dens_1;
@@ -88,22 +95,18 @@ private:
     float self_dens_2;
     float self_lplc_color_2;
     float dens_2;
-    float volume_fraction_2;
+    float volume_fraction_2;*/
 
-    float poly6_value;
     float spiky_value;
     float visco_value;
 
     float grad_poly6;
     float grad_spiky;
-    float lplc_poly6;
     uint max_particle;
 
     //count for both phases - temp
-    uint phase1Particle;
-    uint phase2Particle;
-
-    float kernel;
+    //uint phase1Particle;
+    //uint phase2Particle;
 
     float cell_size;
     uint3 grid_size;
@@ -115,8 +118,6 @@ private:
     float time_step;
     float surf_norm;
     float surf_coe;
-
-    float kernel_2;
 
     int misc;
 };

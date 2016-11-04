@@ -11,14 +11,16 @@ INCLUDEPATH+=./include \
 
 SOURCES+=$$PWD/src/sph_main.cpp \
          $$PWD/src/sph_particle.cpp \
-         $$PWD/src/sph_system.cpp
+         $$PWD/src/sph_system.cpp \
+    src/sph_phasedata.cpp
 
 HEADERS+=$$PWD/include/sph_data.h \
          $$PWD/include/sph_header.h \
          $$PWD/include/sph_system.h \
          $$PWD/include/sph_type.h \
          $$PWD/include/sph_particle.h \
-         $$PWD/include/vec3.h
+         $$PWD/include/vec3.h \
+    include/sph_phasedata.h
 
 OTHER_FILES+=$$PWD/Shader/shader.fs \
              $$PWD/Shader/shader.vs
