@@ -49,8 +49,6 @@ SPHSystem::SPHSystem()
 	grid_size.z=(uint)ceil(world_size.z/cell_size);
 	tot_cell=grid_size.x*grid_size.y*grid_size.z;
 
-    h=1.0f;
-
 	gravity.x=0.0f; 
     gravity.y=-9.8f;
 	gravity.z=0.0f;
@@ -67,6 +65,7 @@ SPHSystem::SPHSystem()
 
 	grad_poly6=-945/(32 * PI * pow(kernel, 9));
 	lplc_poly6=-945/(8 * PI * pow(kernel, 9));
+    grad_spiky=-45.0/(PI*pow(kernel, 6));
 
 	kernel_2=kernel*kernel;
 
@@ -75,6 +74,7 @@ SPHSystem::SPHSystem()
 
 	sys_running=0;
 
+    //miscibility
     misc=0;
 
     //first phase (liquid) - water - more dense, lower visc - less mass
@@ -137,8 +137,8 @@ void SPHSystem::animation()
 
 void SPHSystem::init_system()
 {
-	float3 pos;
-	float3 vel;
+    vec3 pos;
+    vec3 vel;
 
 	vel.x=0.0f;
 	vel.y=0.0f;
@@ -168,6 +168,8 @@ void SPHSystem::init_system()
         }
     }
 
+
+
     volume_fraction_1=phase1Particle/num_particle;
     volume_fraction_2=phase2Particle/num_particle;
 
@@ -177,8 +179,8 @@ void SPHSystem::init_system()
 //blue lower density
 void SPHSystem::damnScenario()
 {
-    float3 pos;
-    float3 vel;
+    vec3 pos;
+    vec3 vel;
 
     vel.x=0.0f;
     vel.y=0.0f;
@@ -217,8 +219,8 @@ void SPHSystem::damnScenario()
 //blue = bottom, purple = drop
 void SPHSystem::dropScenario()
 {
-    float3 pos;
-    float3 vel;
+    vec3 pos;
+    vec3 vel;
 
     vel.x=0.0f;
     vel.y=0.0f;
@@ -254,7 +256,7 @@ void SPHSystem::dropScenario()
     printf("Init Particle: %u\n", num_particle);
 }
 
-void SPHSystem::add_particle(int _phase, float3 pos, float3 vel)
+void SPHSystem::add_particle(int _phase, vec3 pos, vec3 vel)
 {
 	Particle *p=&(mem[num_particle]);
 
@@ -269,8 +271,6 @@ void SPHSystem::add_particle(int _phase, float3 pos, float3 vel)
         p->visc=individualVisc_1;
         p->selfDens=self_dens_1;
         p->lplcColour=self_lplc_color_1;
-
-        //individual rest densities for each phase
         p->restdens=dens_1;
         p->dens=p->restdens;
 
@@ -285,8 +285,6 @@ void SPHSystem::add_particle(int _phase, float3 pos, float3 vel)
         p->visc=individualVisc_2;
         p->selfDens=self_dens_2;
         p->lplcColour=self_lplc_color_2;
-
-        //individual rest densities for each phase
         p->restdens=dens_2;
         p->dens=p->restdens;
         phase2Particle++;
@@ -301,7 +299,6 @@ void SPHSystem::add_particle(int _phase, float3 pos, float3 vel)
     p->driftVelocity.x=0.0f;
     p->driftVelocity.y=0.0f;
     p->driftVelocity.z=0.0f;
-
 	p->pres=0.0f;
 
 	p->next=NULL;
@@ -346,13 +343,24 @@ void SPHSystem::comp_dens_pres()
 	int3 near_pos;
 	uint hash;
 
-	float3 rel_pos;
+    vec3 rel_pos;
 	float r2;
 
 	for(uint i=0; i<num_particle; i++)
 	{
 		p=&(mem[i]); 
 		cell_pos=calc_cell_pos(p->pos);
+
+        //setting up particle's volume fraction - volume fraction will change during sim so need to update how many particles are in each phase
+        //p->volFrac=1/num_particle;
+        if(p->phase==1)
+        {
+            p->volFrac=1/phase1Particle;
+        }
+        else if(p->phase==2)
+        {
+            p->volFrac=1/phase2Particle;
+        }
 
 		p->dens=0.0f;
 		p->pres=0.0f;
@@ -392,7 +400,7 @@ void SPHSystem::comp_dens_pres()
                         p->dens=p->dens + p->mass * poly6_value * pow(kernel_2-r2, 3);
 
                         //check for neighbours
-                        if(r2>h*h)
+                        if(r2>kernel*kernel)
                         {
                             np=np->next;
                             continue;
@@ -421,8 +429,8 @@ void SPHSystem::comp_force_adv()
 	int3 near_pos;
 	uint hash;
 
-	float3 rel_pos;
-	float3 rel_vel;
+    vec3 rel_pos;
+    vec3 rel_vel;
 
 	float r2;
 	float r;
@@ -433,7 +441,7 @@ void SPHSystem::comp_force_adv()
 	float visc_kernel;
 	float temp_force;
 
-	float3 grad_color;
+    vec3 grad_color;
 	float lplc_color;
 
 	for(uint i=0; i<num_particle; i++)
@@ -513,20 +521,10 @@ void SPHSystem::comp_force_adv()
 			}
 		}
 
-        //DRIFT VELOCITY
+        //DRIFT VELOCITY - Need to change design so it's not reliant on just two phases also move to own function after acceleration implementation
         //user constants
-        float strengthFac=0.000001f;
+        /*float strengthFac=0.000001f;
         float diffuseConst=0.0001f;
-
-        float pressureRelationship;
-        if(misc==1)
-        {
-            pressureRelationship=1;
-        }
-        else if(misc==0)
-        {
-            pressureRelationship=0;
-        }
 
         if(p->phase==1)
         {
@@ -536,39 +534,189 @@ void SPHSystem::comp_force_adv()
             firstPhase.z=strengthFac*(p->restdens-(volume_fraction_2*dens_2)/(volume_fraction_1*dens_1+volume_fraction_2*dens_2)*dens_2)*p->acc.y;
 
             vec3 secondPhase;
-            vec3 calc=(0,0,0);
+            vec3 poly6KernelGrad;
+            vec3 spikyKernelGrad;
+            vec3 interpolatedPressureInd;
+            //reset for each particle
+            interpolatedPressureInd.x=0.0f;
+            interpolatedPressureInd.y=0.0f;
+            interpolatedPressureInd.z=0.0f;
             //neighbourhood particles
-            for(int j=0; j<10; j++)//need to find number of neighbours for each particle
+            for(int j=0; j<p->neighbour.size(); j++)
             {
                 Particle neighbour;
                 neighbour=&(p->neighbour[j]);
-                vec3 temp;
-                temp = neighbour.mass/;
 
-                calc+=temp;
+                vec3 interpolatedDensity;
+                vec3 calc_1;
+                float phasePressureSelf;
+                float phasePressureN;
+                if(misc==1)
+                {
+                    //mixture pressure * individual particles volume fraction
+                    phasePressureSelf=p->pres*p->volFrac;
+                    phasePressureN=neighbour.pres*neighbour.volFrac;
+                }
+                else if(misc==0)
+                {
+                    phasePressureSelf=p->pres;
+                    phasePressureN=neighbour.pres;
+                }
+
+                // /\Wij - for density interpolation
+                poly6KernelGrad=poly6Grad(p->pos, neighbour.pos);
+
+                //for all other calculations involving derivative of smoothing function
+                spikyKernelGrad=spikyGrad(p->pos, neighbour.pos);
+
+                interpolatedDensity.x=(p->mass*poly6KernelGrad.x);
+                interpolatedDensity.y=(p->mass*poly6KernelGrad.y);
+                interpolatedDensity.z=(p->mass*poly6KernelGrad.z);
+
+                //calculating first interpolated pressure (for individual particles) - using the spiky for other derivatives of smoothing function
+                calc_1.x = (neighbour.mass/interpolatedDensity.x)*(phasePressureN-phasePressureSelf)*spikyKernelGrad.x;
+                calc_1.y = (neighbour.mass/interpolatedDensity.y)*(phasePressureN-phasePressureSelf)*spikyKernelGrad.y;
+                calc_1.z = (neighbour.mass/interpolatedDensity.z)*(phasePressureN-phasePressureSelf)*spikyKernelGrad.z;
+
+                //accumulates to form the sum of all this particles neighbours
+                interpolatedPressureInd.x+=calc_1.x;
+                interpolatedPressureInd.y+=calc_1.y;
+                interpolatedPressureInd.z+=calc_1.z;
             }
-            secondPhase.x=strengthFac*();
+            //for mixture
+            float phasePressureSelf;
+            float phasePressurePhase;
+            if(misc==1)
+            {
+                //mixture pressure * phase volume fraction - NEED TO GET PRESSURE OF EACH PHASE, NOT INDIVIDUAL PARTICLE
+                phasePressureSelf=p->pres*volume_fraction_1;
+                phasePressurePhase=p->pres*volume_fraction_2;
+            }
+            else if(misc==0)
+            {
+                phasePressureSelf=p->pres;
+                phasePressurePhase=p->pres;
+            }
+            //interpolated pressure of other phases (summed of all OTHER phases rather than neighbours) - in this case only 2 phases needs changing
+            vec3 interpolatedPressureMix;
+            //not sure about this, may not be interpolated as its for the other phases - using poly6 for interpolated density
+            vec3 interpolatedDensityMix;
+            interpolatedDensityMix.x=individualMass_1*poly6KernelGrad.x;
+            interpolatedDensityMix.y=individualMass_1*poly6KernelGrad.y;
+            interpolatedDensityMix.z=individualMass_1*poly6KernelGrad.z;
+                                                                                //pressure of other phase minus pressure of current phase
+            interpolatedPressureMix.x=(individualMass_2/interpolatedDensityMix.x)*(phasePressurePhase-phasePressureSelf)*spikyKernelGrad.x;
+            interpolatedPressureMix.y=(individualMass_2/interpolatedDensityMix.y)*(phasePressurePhase-phasePressureSelf)*spikyKernelGrad.y;
+            interpolatedPressureMix.z=(individualMass_2/interpolatedDensityMix.z)*(phasePressurePhase-phasePressureSelf)*spikyKernelGrad.z;
+
+                                                                  // - sum of other phases values
+            secondPhase.x=strengthFac*(interpolatedPressureInd.x-(volume_fraction_2*dens_2)/(volume_fraction_1*dens_1+volume_fraction_2*dens_2)*interpolatedPressureMix.x);
+            secondPhase.y=strengthFac*(interpolatedPressureInd.y-(volume_fraction_2*dens_2)/(volume_fraction_1*dens_1+volume_fraction_2*dens_2)*interpolatedPressureMix.y);
+            secondPhase.z=strengthFac*(interpolatedPressureInd.z-(volume_fraction_2*dens_2)/(volume_fraction_1*dens_1+volume_fraction_2*dens_2)*interpolatedPressureMix.z);
 
             vec3 thirdPhase;
 
-            float sum=(volume_fraction_1*p->dens/(volume_fraction_1*dens_1))*p->dens;
-            //float thirdPhase=(volume_fraction_1/volume_fraction_1)-(volume_fraction_1*p->dens/volume_fraction_1*dens_1)*(volume_fraction_1/volume_fraction_1);
             //drift velocity - second phase is where pressure relationship will affect the misc/immiscibility of the mixture
             p->driftVelocity.x=firstPhase.x-secondPhase.x-thirdPhase.x;
-            //p->driftVelocity.y=(strengthFac*(dens_1-sum)*p->acc.x)-(strengthFac*pressureRelationship*(dens_1-sum)-diffuseConst*thirdPhase);
-            //p->driftVelocity.z=(strengthFac*(dens_1-sum)*p->acc.y)-(strengthFac*pressureRelationship*(dens_1-sum)-diffuseConst*thirdPhase);
+            p->driftVelocity.y=firstPhase.y-secondPhase.y-thirdPhase.y;
+            p->driftVelocity.z=firstPhase.z-secondPhase.z-thirdPhase.z;
         }
         else if(p->phase==2)
         {
-            //volume fraction may have to be for individual particle
-            float sum=(volume_fraction_2*p->dens/(volume_fraction_2*dens_2))*p->dens;
-            float thirdPhase=(volume_fraction_2/volume_fraction_2)-(volume_fraction_2*p->dens/volume_fraction_2*dens_2)*(volume_fraction_2/volume_fraction_2);
-            //drift velocity - second phase is where pressure relationship will affect the misc/immiscibility of the mixture
-            p->driftVelocity.x=strengthFac*(dens_2-sum)*p->acc.x-(strengthFac*pressureRelationship*(dens_2-sum)-diffuseConst*thirdPhase);
-            p->driftVelocity.y=strengthFac*(dens_2-sum)*p->acc.x-(strengthFac*pressureRelationship*(dens_2-sum)-diffuseConst*thirdPhase);
-            p->driftVelocity.z=strengthFac*(dens_2-sum)*p->acc.y-(strengthFac*pressureRelationship*(dens_2-sum)-diffuseConst*thirdPhase);
+            vec3 firstPhase; //acceleartion needs changing
+            firstPhase.x=strengthFac*(p->restdens-(volume_fraction_1*dens_1)/(volume_fraction_1*dens_1+volume_fraction_2*dens_2)*dens_2)*p->acc.x;
+            firstPhase.y=strengthFac*(p->restdens-(volume_fraction_1*dens_1)/(volume_fraction_1*dens_1+volume_fraction_2*dens_2)*dens_2)*p->acc.y;
+            firstPhase.z=strengthFac*(p->restdens-(volume_fraction_1*dens_1)/(volume_fraction_1*dens_1+volume_fraction_2*dens_2)*dens_2)*p->acc.y;
 
-        }
+            vec3 secondPhase;
+            vec3 poly6KernelGrad;
+            vec3 spikyKernelGrad;
+            vec3 interpolatedPressureInd;
+            //reset for each particle
+            interpolatedPressureInd.x=0.0f;
+            interpolatedPressureInd.y=0.0f;
+            interpolatedPressureInd.z=0.0f;
+            //neighbourhood particles
+            for(int j=0; j<p->neighbour.size(); j++)
+            {
+                Particle neighbour;
+                neighbour=&(p->neighbour[j]);
+
+                vec3 interpolatedDensity;
+                vec3 calc_1;
+                float phasePressureSelf;
+                float phasePressureN;
+                if(misc==1)
+                {
+                    //mixture pressure * individual particles volume fraction
+                    phasePressureSelf=p->pres*p->volFrac;
+                    phasePressureN=neighbour.pres*neighbour.volFrac;
+                }
+                else if(misc==0)
+                {
+                    phasePressureSelf=p->pres;
+                    phasePressureN=neighbour.pres;
+                }
+
+                // /\Wij - poly6 for density interpolation
+                poly6KernelGrad=poly6Grad(p->pos, neighbour.pos);
+
+                //for all other calculations involving derivative of smoothing function
+                spikyKernelGrad=spikyGrad(p->pos, neighbour.pos);
+
+                interpolatedDensity.x=(p->mass*poly6KernelGrad.x);
+                interpolatedDensity.y=(p->mass*poly6KernelGrad.y);
+                interpolatedDensity.z=(p->mass*poly6KernelGrad.z);
+
+                //calculating first interpolated pressure (for individual particles)
+                calc_1.x = (neighbour.mass/interpolatedDensity.x)*(phasePressureN-phasePressureSelf)*spikyKernelGrad.x;
+                calc_1.y = (neighbour.mass/interpolatedDensity.y)*(phasePressureN-phasePressureSelf)*spikyKernelGrad.y;
+                calc_1.z = (neighbour.mass/interpolatedDensity.z)*(phasePressureN-phasePressureSelf)*spikyKernelGrad.z;
+
+                //accumulates to form the sum of all this particles neighbours
+                interpolatedPressureInd.x+=calc_1.x;
+                interpolatedPressureInd.y+=calc_1.y;
+                interpolatedPressureInd.z+=calc_1.z;
+            }
+            //for mixture
+            float phasePressureSelf;
+            float phasePressurePhase;
+            if(misc==1)
+            {
+                //mixture pressure * phase volume fraction - NEED TO GET PRESSURE OF EACH PHASE, NOT INDIVIDUAL PARTICLE
+                phasePressureSelf=p->pres*volume_fraction_2;
+                phasePressurePhase=p->pres*volume_fraction_1;
+            }
+            else if(misc==0)
+            {
+                phasePressureSelf=p->pres;
+                phasePressurePhase=p->pres;
+            }
+            //interpolated pressure of other phases (summed of all OTHER phases rather than neighbours) - in this case only 2 phases needs changing
+            vec3 interpolatedPressureMix;
+            //not sure about this, may not be interpolated as its for the other phases
+            vec3 interpolatedDensityMix;
+            interpolatedDensityMix.x=individualMass_2*poly6KernelGrad.x;
+            interpolatedDensityMix.y=individualMass_2*poly6KernelGrad.y;
+            interpolatedDensityMix.z=individualMass_2*poly6KernelGrad.z;
+                                                                                //pressure of other phase minus pressure of current phase
+            interpolatedPressureMix.x=(individualMass_1/interpolatedDensityMix.x)*(phasePressurePhase-phasePressureSelf)*spikyKernelGrad.x;
+            interpolatedPressureMix.y=(individualMass_1/interpolatedDensityMix.y)*(phasePressurePhase-phasePressureSelf)*spikyKernelGrad.y;
+            interpolatedPressureMix.z=(individualMass_1/interpolatedDensityMix.z)*(phasePressurePhase-phasePressureSelf)*spikyKernelGrad.z;
+
+                                                                  // - sum of other phases values
+            secondPhase.x=strengthFac*(interpolatedPressureInd.x-(volume_fraction_1*dens_1)/(volume_fraction_1*dens_1+volume_fraction_2*dens_2)*interpolatedPressureMix.x);
+            secondPhase.y=strengthFac*(interpolatedPressureInd.y-(volume_fraction_1*dens_1)/(volume_fraction_1*dens_1+volume_fraction_2*dens_2)*interpolatedPressureMix.y);
+            secondPhase.z=strengthFac*(interpolatedPressureInd.z-(volume_fraction_1*dens_1)/(volume_fraction_1*dens_1+volume_fraction_2*dens_2)*interpolatedPressureMix.z);
+
+            vec3 thirdPhase;
+
+            //drift velocity - second phase is where pressure relationship will affect the misc/immiscibility of the mixture
+            p->driftVelocity.x=firstPhase.x-secondPhase.x-thirdPhase.x;
+            p->driftVelocity.y=firstPhase.y-secondPhase.y-thirdPhase.y;
+            p->driftVelocity.z=firstPhase.z-secondPhase.z-thirdPhase.z;
+
+        }*/
 
         //p->driftVelocity.x=0.007;
         //p->driftVelocity.y=0.007;
@@ -584,6 +732,28 @@ void SPHSystem::comp_force_adv()
 			p->acc.z+=surf_coe * lplc_color * grad_color.z / p->surf_norm;
 		}
 	}
+}
+
+//used for interpolated densities
+vec3 SPHSystem::poly6Grad(vec3 _iPos, vec3 _jPos)
+{
+    vec3 gradient;
+    vec3 diffPos=_iPos-_jPos;
+    float radiusSquared=diffPos.dot(diffPos);
+
+    gradient=grad_poly6*pow((kernel*kernel)-radiusSquared, 2)*diffPos;
+    return gradient;
+}
+
+//used for all other calculations involving the smoothing kernel function
+vec3 SPHSystem::spikyGrad(vec3 _iPos, vec3 _jPos)
+{
+    vec3 gradient;
+    vec3 diffPos=_iPos-_jPos;
+    float radius=sqrt(diffPos.dot(diffPos));
+
+    gradient=grad_spiky*pow(kernel-radius,2)*diffPos/radius;
+    return gradient;
 }
 
 void SPHSystem::advection()
@@ -649,7 +819,7 @@ void SPHSystem::advection()
 	}
 }
 
-int3 SPHSystem::calc_cell_pos(float3 p)
+int3 SPHSystem::calc_cell_pos(vec3 p)
 {
 	int3 cell_pos;
 	cell_pos.x = int(floor((p.x) / cell_size));

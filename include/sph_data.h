@@ -24,6 +24,7 @@
 
 #include "sph_header.h"
 #include "sph_type.h"
+#include "vec3.h"
 
 float window_width=1000;
 float window_height=1000;
@@ -40,9 +41,9 @@ int buttonState;
 float xRotLength = 0.0f;
 float yRotLength = 0.0f;
 
-float3 real_world_origin;
-float3 real_world_side;
-float3 sim_ratio;
+vec3 real_world_origin;
+vec3 real_world_side;
+vec3 sim_ratio;
 
 float world_width;
 float world_height;

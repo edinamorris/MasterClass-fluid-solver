@@ -200,14 +200,14 @@ void render_particles()
 
     for(uint i=0; i<sph->num_particle; i++)
     {
-		glBegin(GL_POINTS);
+        glBegin(GL_POINTS);
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glColor3f(sph->mem[i].colour.x, sph->mem[i].colour.y, sph->mem[i].colour.z);
 			glVertex3f(sph->mem[i].pos.x*sim_ratio.x+real_world_origin.x, 
 						sph->mem[i].pos.y*sim_ratio.y+real_world_origin.y,
                         sph->mem[i].pos.z*sim_ratio.z+real_world_origin.z);
-		glEnd();
+        glEnd();
     }
 
 }
@@ -236,8 +236,8 @@ void display_func()
 
 	sph->animation();
 
-	glUseProgram(p);
-	render_particles();
+    glUseProgram(p);
+    render_particles();
 
 	glUseProgram(0);
 	draw_box(real_world_origin.x, real_world_origin.y, real_world_origin.z, real_world_side.x, real_world_side.y, real_world_side.z);
@@ -374,7 +374,7 @@ void motion_func(int x, int y)
 int main(int argc, char **argv)
 {
     glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
+    glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
     glutInitWindowPosition(0, 0);
     glutInitWindowSize(window_width, window_height);
     glutCreateWindow("SPH Fluid 3D");

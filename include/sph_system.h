@@ -26,24 +26,26 @@
 #include <stdlib.h>
 #include "sph_type.h"
 #include "vector"
+#include "vec3.h"
 
 class Particle
 {
 public:
 	uint id;
-	float3 pos;
-	float3 vel;
-	float3 acc;
-	float3 ev;
-    float3 colour;
+    vec3 pos;
+    vec3 vel;
+    vec3 acc;
+    vec3 ev;
+    vec3 colour;
     int phase;
-    float3 driftVelocity;
+    vec3 driftVelocity;
 
     //made these individual for each particle
     float visc;
     float mass;
     float selfDens;
     float lplcColour;
+    float volFrac;
 
 	float dens;
     //individual phase density for liquids
@@ -68,12 +70,12 @@ public:
 
 	float kernel;
 
-	float3 world_size;
+    vec3 world_size;
 	float cell_size;
 	uint3 grid_size;
 	uint tot_cell;
 
-	float3 gravity;
+    vec3 gravity;
 	float wall_damping;
 	float gas_constant;
 	float time_step;
@@ -85,16 +87,15 @@ public:
 	float visco_value;
 
 	float grad_poly6;
+    float grad_spiky;
 	float lplc_poly6;
 
 	float kernel_2;
-    //smoothing radius
-    float h;
 
     int misc;
 
     //phase 1
-    float3 colour_1;
+    vec3 colour_1;
     float individualMass_1;
     float individualVisc_1;
     float self_dens_1;
@@ -103,7 +104,7 @@ public:
     float volume_fraction_1;
 
     //phase 2
-    float3 colour_2;
+    vec3 colour_2;
     float individualMass_2;
     float individualVisc_2;
     float self_dens_2;
@@ -123,7 +124,10 @@ public:
 	void init_system();
     void damnScenario();
     void dropScenario();
-    void add_particle(int _phase, float3 pos, float3 vel);
+    void add_particle(int _phase, vec3 pos, vec3 vel);
+    //returns gradient
+    vec3 poly6Grad(vec3 _iPos, vec3 _jPos);
+    vec3 spikyGrad(vec3 _iPos, vec3 _jPos);
 
 private:
 	void build_table();
@@ -132,7 +136,7 @@ private:
 	void advection();
 
 private:
-	int3 calc_cell_pos(float3 p);
+    int3 calc_cell_pos(vec3 p);
 	uint calc_cell_hash(int3 cell_pos);
 };
 
