@@ -72,7 +72,7 @@ private:
 
     //variables
 private:
-    uint num_particle;
+    int num_particle;
     int numberOfPhases;
     vec3 world_size;
     uint sys_running;

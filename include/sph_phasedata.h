@@ -28,10 +28,11 @@ public:
     float getVolumeFraction(int _phase){return phases[_phase].volumeFraction;}
     float getDensity(int _phase){return phases[_phase].dens;}
     float getMass(int _phase){return phases[_phase].individualMass;}
+
     void addParticle(int _phase){phases[_phase].numberOfParticles+=1;}
 
     //need to have these updated after all particles have been added
-    void setVolumeFraction(int _volFrac, int _phase){phases[_phase].volumeFraction=_volFrac;}
+    void setVolumeFraction(float _volFrac, int _phase){phases[_phase].volumeFraction=_volFrac;}
     void setNumberOfParticles(int _numPart, int _phase){phases[_phase].numberOfParticles=_numPart;}
 private:
 
