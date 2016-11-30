@@ -110,7 +110,7 @@ void SPHSystem::animation()
 	build_table();
 	comp_dens_pres();
 	comp_force_adv();
-    //driftVelocity();
+    driftVelocity();
 	advection();
 }
 
@@ -316,7 +316,7 @@ void SPHSystem::build_table()
     //Particle **pp;
     int hash;
 
-    for(int i=0; i<tot_cell; i++)
+    for(int i=0; i<int(tot_cell); i++)
 	{
 		cell[i]=NULL;
 	}
@@ -343,7 +343,6 @@ void SPHSystem::comp_dens_pres()
 {
 	Particle *p;
 	Particle *np;
-    Particle **pp;
 
 	int3 cell_pos;
 	int3 near_pos;
@@ -441,7 +440,7 @@ void SPHSystem::comp_force_adv()
     vec3 grad_color;
 	float lplc_color;
 
-	for(uint i=0; i<num_particle; i++)
+    for(int i=0; i<num_particle; i++)
 	{
 		p=&(mem[i]); 
 		cell_pos=calc_cell_pos(p->pos);
@@ -534,12 +533,25 @@ void SPHSystem::driftVelocity()
     for(int i=0; i<num_particle; i++)
     {
         p=&(mem[i]);
-        //user constants
-        float strengthFac=1.0f;
-        float diffuseConst=1.0f;
+        p->driftVelocity.x=0;
+        p->driftVelocity.y=0;
+        p->driftVelocity.z=0;
+        //set to 0 for immiscibility
+        float strengthFac=0.00000001f;
+        //set to 0 for no diffuse effect
+        float diffuseConst=0.00001f;
         vec3 firstPhase;
         vec3 secondPhase;
         vec3 thirdPhase;
+        firstPhase.x=0;
+        firstPhase.y=0;
+        firstPhase.z=0;
+        secondPhase.x=0;
+        secondPhase.y=0;
+        secondPhase.z=0;
+        thirdPhase.x=0;
+        thirdPhase.y=0;
+        thirdPhase.z=0;
 
         //FIRST PHASE OF EQUATION
         //sigma k, all other phases
@@ -817,13 +829,17 @@ void SPHSystem::advection()
 	{
 		p=&(mem[i]);
 
-        //std::cout<<"driftVelocity X -> "<<p->driftVelocity.x<<"\n";
-        //std::cout<<"driftVelocity Y -> "<<p->driftVelocity.y<<"\n";
-        //std::cout<<"driftVelocity Z -> "<<p->driftVelocity.z<<"\n";
+        p->vel.x=p->vel.x+p->driftVelocity.x*time_step+p->acc.x*time_step/p->dens+gravity.x*time_step;
+        p->vel.y=p->vel.y+p->driftVelocity.y*time_step+p->acc.y*time_step/p->dens+gravity.y*time_step;
+        p->vel.z=p->vel.z+p->driftVelocity.z*time_step+p->acc.z*time_step/p->dens+gravity.z*time_step;
 
-        p->vel.x=p->vel.x+p->acc.x*time_step/p->dens+gravity.x*time_step;
-        p->vel.y=p->vel.y+p->acc.y*time_step/p->dens+gravity.y*time_step;
-        p->vel.z=p->vel.z+p->acc.z*time_step/p->dens+gravity.z*time_step;
+        //p->vel.x=p->vel.x+p->acc.x*time_step/p->dens+gravity.x*time_step;
+        //p->vel.y=p->vel.y+p->acc.y*time_step/p->dens+gravity.y*time_step;
+        //p->vel.z=p->vel.z+p->acc.z*time_step/p->dens+gravity.z*time_step;
+
+        //std::cout<<"Velocity X -> "<<p->vel.x<<"\n";
+        //std::cout<<"Velocity Y -> "<<p->vel.y<<"\n";
+        //std::cout<<"Velocity Z -> "<<p->vel.z<<"\n";
 
 		p->pos.x=p->pos.x+p->vel.x*time_step;
 		p->pos.y=p->pos.y+p->vel.y*time_step;
