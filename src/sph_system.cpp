@@ -109,8 +109,8 @@ void SPHSystem::animation()
 
 	build_table();
 	comp_dens_pres();
-	comp_force_adv();
     driftVelocity();
+    comp_force_adv();
 	advection();
 }
 
@@ -120,13 +120,6 @@ void SPHSystem::loadScenario(int _scenario)
     if(num_particle>0)
     {
         free(mem);
-    }
-
-    //reset variables
-    num_particle=0;
-    for(int i=0; i<numberOfPhases; i++)
-    {
-        updatePhases.setNumberOfParticles(0,i);
     }
 
     //waves
@@ -166,12 +159,12 @@ void SPHSystem::loadScenario(int _scenario)
             }
         }
 
-        for(int i=0; i<numberOfPhases; i++)
+        /*for(int i=0; i<numberOfPhases; i++)
         {
             float numParticlePhase = updatePhases.getNumberOfParticles(i);
             float volumeFraction=numParticlePhase/num_particle;
             updatePhases.setVolumeFraction(volumeFraction, i);
-        }
+        }*/
 
         std::cout<<"number of particles >"<<num_particle<<"\n";
     }
@@ -212,12 +205,12 @@ void SPHSystem::loadScenario(int _scenario)
             }
         }
 
-        for(int i=0; i<numberOfPhases; i++)
+        /*for(int i=0; i<numberOfPhases; i++)
         {
             float numParticlePhase = updatePhases.getNumberOfParticles(i);
             float volumeFraction=numParticlePhase/num_particle;
             updatePhases.setVolumeFraction(volumeFraction, i);
-        }
+        }*/
 
         std::cout<<"number of particles >"<<num_particle<<"\n";
     }
@@ -257,12 +250,12 @@ void SPHSystem::loadScenario(int _scenario)
             }
         }
 
-        for(int i=0; i<numberOfPhases; i++)
+        /*for(int i=0; i<numberOfPhases; i++)
         {
             float numParticlePhase = updatePhases.getNumberOfParticles(i);
             float volumeFraction=numParticlePhase/num_particle;
             updatePhases.setVolumeFraction(volumeFraction, i);
-        }
+        }*/
 
         std::cout<<"number of particles >"<<num_particle<<"\n";
     }
@@ -296,9 +289,28 @@ void SPHSystem::add_particle(int _phase, vec3 pos, vec3 vel)
     p->ev.x=0.0f;
     p->ev.y=0.0f;
     p->ev.z=0.0f;
-    p->driftVelocity.x=0.0f;
-    p->driftVelocity.y=0.0f;
-    p->driftVelocity.z=0.0f;
+    for(int i=0; i<numberOfPhases; i++)
+    {
+        //drift velocity of particle for first and second liquids
+        p->driftVelocity[i].x=0.0f;
+        p->driftVelocity[i].y=0.0f;
+        p->driftVelocity[i].z=0.0f;
+    }
+
+    //TEMP initial volume fraction
+    if(_phase==0)
+    {
+        //if particle starts in liquid 0 then it will be completely in liquid 0, no mixing has occurerd
+        p->volumeFraction[0]=1.0f;
+        p->volumeFraction[1]=0.0f;
+    }
+    else if(_phase==1)
+    {
+        //opposite if starts in liquid 1
+        p->volumeFraction[0]=0.0f;
+        p->volumeFraction[1]=1.0f;
+    }
+
     p->pres=0.0f;
 
     p->next=NULL;
@@ -361,9 +373,6 @@ void SPHSystem::comp_dens_pres()
         //each time clearing vector
         p->neighbour.clear();
 
-        //volume fraction of individual particle
-        p->volFrac=(1.0/updatePhases.getNumberOfParticles(p->phase));
-
 		for(int x=-1; x<=1; x++)
 		{
 			for(int y=-1; y<=1; y++)
@@ -415,7 +424,7 @@ void SPHSystem::comp_dens_pres()
 	}
 }
 
-//need to calculate volume fraction of each particle so its updated
+//comment out acceleration here, needs to be calculated after drift velocity with multiple fluid method
 void SPHSystem::comp_force_adv()
 {
 	Particle *p;
@@ -490,6 +499,7 @@ void SPHSystem::comp_force_adv()
 							p->acc.y=p->acc.y-rel_pos.y*temp_force/r;
 							p->acc.z=p->acc.z-rel_pos.z*temp_force/r;
 
+                            //estimated velocity
 							rel_vel.x=np->ev.x-p->ev.x;
 							rel_vel.y=np->ev.y-p->ev.y;
 							rel_vel.z=np->ev.z-p->ev.z;
@@ -525,277 +535,290 @@ void SPHSystem::comp_force_adv()
 	}
 }
 
-//needs some work - mainly testing of values
+//needs some work - readjusting based on new findings
+//NEED TO CHANGE MOST OF THE IMPLEMENTATION FOR INDIDIVIDUAL PARTICLES INSTEAD OF PHASES
 void SPHSystem::driftVelocity()
 {
     Particle *p;
-
-    for(int i=0; i<num_particle; i++)
+    //for each phase AND each particle, i.e. each particle will have two drift velocities attached to it
+    for(int phase=0; phase<numberOfPhases; phase++)
     {
-        p=&(mem[i]);
-        p->driftVelocity.x=0;
-        p->driftVelocity.y=0;
-        p->driftVelocity.z=0;
-        //set to 0 for immiscibility
-        float strengthFac=0.00000001f;
-        //set to 0 for no diffuse effect
-        float diffuseConst=0.00001f;
-        vec3 firstPhase;
-        vec3 secondPhase;
-        vec3 thirdPhase;
-        firstPhase.x=0;
-        firstPhase.y=0;
-        firstPhase.z=0;
-        secondPhase.x=0;
-        secondPhase.y=0;
-        secondPhase.z=0;
-        thirdPhase.x=0;
-        thirdPhase.y=0;
-        thirdPhase.z=0;
+        for(int i=0; i<num_particle; i++)
+        {
+            p=&(mem[i]);
+            p->driftVelocity[phase].x=0;
+            p->driftVelocity[phase].y=0;
+            p->driftVelocity[phase].z=0;
+            //set to 0 for immiscibility
+            float strengthFac=0.000000001f;
+            //set to 0 for no diffuse effect
+            //float diffuseConst=0.0f;
+            float diffuseConst=0.0000001f;
+            vec3 firstPhase;
+            vec3 secondPhase;
+            vec3 thirdPhase;
+            firstPhase.x=0;
+            firstPhase.y=0;
+            firstPhase.z=0;
+            secondPhase.x=0;
+            secondPhase.y=0;
+            secondPhase.z=0;
+            thirdPhase.x=0;
+            thirdPhase.y=0;
+            thirdPhase.z=0;
 
-        //FIRST PHASE OF EQUATION
-        //sigma k, all other phases
-        float summation=0;
-        float mixDensity=0;
-        //looping through all phases
-        for(int j=0; j<numberOfPhases; j++)
-        {
-            //mixture Density
-            mixDensity+=(updatePhases.getVolumeFraction(j)*updatePhases.getDensity(j));
-        }
-        for(int j=0; j<numberOfPhases; j++)
-        {
-            //only when it's not itself
-            if(j!=p->phase)
+            //FIRST PHASE OF EQUATION
+            //sigma k, all other phases
+            float summation=0;
+            float mixDensity=0;
+            //looping through all phases
+            for(int j=0; j<numberOfPhases; j++)
             {
-                //sum of all other phases (volumefraction of phase * phase density)/the mix density and then * phase density
-                summation+=((updatePhases.getVolumeFraction(j)*updatePhases.getDensity(j))/mixDensity)*updatePhases.getDensity(j);
+                //mixture Density
+                mixDensity+=(p->volumeFraction[phase]*updatePhases.getDensity(j));
             }
-        }
+            for(int j=0; j<numberOfPhases; j++)
+            {
+                //only when it's not itself
+                if(j!=p->phase)
+                {
+                    //sum of all other phases (volumefraction of phase * phase density)/the mix density and then * phase density
+                    summation+=((p->volumeFraction[phase]*updatePhases.getDensity(j))/mixDensity)*updatePhases.getDensity(j);
+                }
+            }
 
-        //changed first part of equation from rest density as that's the phase density, believe it should be individual particle density
-        firstPhase.x=strengthFac*(p->dens-summation)*p->acc.x;
-        firstPhase.y=strengthFac*(p->dens-summation)*p->acc.y;
-        firstPhase.z=strengthFac*(p->dens-summation)*p->acc.y;
+            //changed first part of equation from rest density as that's the phase density, believe it should be individual particle density
+            //firstPhase.x=strengthFac*(p->dens-summation)*p->acc.x;
+            //firstPhase.y=strengthFac*(p->dens-summation)*p->acc.y;
+            //firstPhase.z=strengthFac*(p->dens-summation)*p->acc.y;
 
-        //SECOND PHASE OF EQUATION
-        vec3 poly6KernelGrad;
-        vec3 spikyKernelGrad;
-        vec3 interpolatedPressureInd;
-        //INTERPOLATED PRESSURE FOR INDIVIDUAL PARTICLE
-        interpolatedPressureInd.x=0.0f;
-        interpolatedPressureInd.y=0.0f;
-        interpolatedPressureInd.z=0.0f;
-        //neighbourhood particles
-        for(int j=0; j<int(p->neighbour.size()); j++)
-        {
-            Particle *neighbour;
-            neighbour=(p->neighbour[j]);
+            firstPhase.x=firstPhase.x+p->acc.x*time_step/p->dens+gravity.x*time_step;
+            firstPhase.y=firstPhase.y+p->acc.y*time_step/p->dens+gravity.y*time_step;
+            firstPhase.z=firstPhase.z+p->acc.z*time_step/p->dens+gravity.z*time_step;
 
-            vec3 interpolatedDensity;
-            vec3 calc_1;
-            calc_1.x=0;
-            calc_1.y=0;
-            calc_1.z=0;
+            //SECOND PHASE OF EQUATION
+            vec3 poly6KernelGrad;
+            vec3 spikyKernelGrad;
+            vec3 interpolatedPressureInd;
+            //INTERPOLATED PRESSURE FOR INDIVIDUAL PARTICLE
+            interpolatedPressureInd.x=0.0f;
+            interpolatedPressureInd.y=0.0f;
+            interpolatedPressureInd.z=0.0f;
+            //neighbourhood particles
+            for(int j=0; j<int(p->neighbour.size()); j++)
+            {
+                Particle *neighbour;
+                neighbour=(p->neighbour[j]);
+
+                vec3 interpolatedDensity;
+                vec3 calc_1;
+                calc_1.x=0;
+                calc_1.y=0;
+                calc_1.z=0;
+                float phasePressureSelf;
+                float phasePressureN;
+                //the ability to turn misicibility on or off
+                if(misc==1)
+                {
+                    //mixture pressure * individual particles volume fraction
+                    phasePressureSelf=p->pres*p->volumeFraction[phase];
+                    phasePressureN=neighbour->pres*neighbour->volumeFraction[phase];
+                }
+                else
+                {
+                    phasePressureSelf=p->pres;
+                    phasePressureN=neighbour->pres;
+                }
+
+                // /\Wij - for density interpolation
+                poly6KernelGrad=poly6Grad(p->pos, neighbour->pos);
+
+                //for all other calculations involving derivative of smoothing function
+                spikyKernelGrad=spikyGrad(p->pos, neighbour->pos);
+
+                //following standard method for interpolated density
+                interpolatedDensity.x=(neighbour->mass*poly6KernelGrad.x);
+                interpolatedDensity.y=(neighbour->mass*poly6KernelGrad.y);
+                interpolatedDensity.z=(neighbour->mass*poly6KernelGrad.z);
+
+                //calculating first interpolated pressure (for individual particles) - using the spiky for other derivatives of smoothing function
+                if((interpolatedDensity.x!=0)&&(interpolatedDensity.y!=0)&&(interpolatedDensity.z!=0))
+                {
+                    calc_1.x = (neighbour->mass/interpolatedDensity.x)*(phasePressureN-phasePressureSelf)*spikyKernelGrad.x;
+                    calc_1.y = (neighbour->mass/interpolatedDensity.y)*(phasePressureN-phasePressureSelf)*spikyKernelGrad.y;
+                    calc_1.z = (neighbour->mass/interpolatedDensity.z)*(phasePressureN-phasePressureSelf)*spikyKernelGrad.z;
+                }
+
+                //accumulates to form the sum of all this particles neighbours
+                interpolatedPressureInd.x+=calc_1.x;
+                interpolatedPressureInd.y+=calc_1.y;
+                interpolatedPressureInd.z+=calc_1.z;
+            }
+
+            //INTERPOLATED PRESSURE OF MIXTURE
+            //for mixture
             float phasePressureSelf;
-            float phasePressureN;
-            //the ability to turn misicibility on or off
-            if(misc==1)
+            float phasePressurePhase;
+
+            vec3 summation2;
+            summation2.x=0.0f;
+            summation2.y=0.0f;
+            summation2.z=0.0f;
+            float mixDensity2=0.0f;
+            //looping through all phases
+            for(int j=0; j<numberOfPhases; j++)
             {
-                //mixture pressure * individual particles volume fraction
-                phasePressureSelf=p->pres*p->volFrac;
-                phasePressureN=neighbour->pres*neighbour->volFrac;
+                //mixture Density
+                mixDensity2+=(p->volumeFraction[phase]*updatePhases.getDensity(j));
             }
-            else
+            for(int j=0; j<numberOfPhases; j++)
             {
-                phasePressureSelf=p->pres;
-                phasePressureN=neighbour->pres;
-            }
-
-            // /\Wij - for density interpolation
-            poly6KernelGrad=poly6Grad(p->pos, neighbour->pos);
-
-            //for all other calculations involving derivative of smoothing function
-            spikyKernelGrad=spikyGrad(p->pos, neighbour->pos);
-
-            //following standard method for interpolated density
-            interpolatedDensity.x=(neighbour->mass*poly6KernelGrad.x);
-            interpolatedDensity.y=(neighbour->mass*poly6KernelGrad.y);
-            interpolatedDensity.z=(neighbour->mass*poly6KernelGrad.z);
-
-            //calculating first interpolated pressure (for individual particles) - using the spiky for other derivatives of smoothing function
-            if((interpolatedDensity.x!=0)&&(interpolatedDensity.y!=0)&&(interpolatedDensity.z!=0))
-            {
-                calc_1.x = (neighbour->mass/interpolatedDensity.x)*(phasePressureN-phasePressureSelf)*spikyKernelGrad.x;
-                calc_1.y = (neighbour->mass/interpolatedDensity.y)*(phasePressureN-phasePressureSelf)*spikyKernelGrad.y;
-                calc_1.z = (neighbour->mass/interpolatedDensity.z)*(phasePressureN-phasePressureSelf)*spikyKernelGrad.z;
-            }
-
-            //accumulates to form the sum of all this particles neighbours
-            interpolatedPressureInd.x+=calc_1.x;
-            interpolatedPressureInd.y+=calc_1.y;
-            interpolatedPressureInd.z+=calc_1.z;
-        }
-
-        //INTERPOLATED PRESSURE OF MIXTURE
-        //for mixture
-        float phasePressureSelf;
-        float phasePressurePhase;
-
-        vec3 summation2;
-        summation2.x=0.0f;
-        summation2.y=0.0f;
-        summation2.z=0.0f;
-        float mixDensity2=0.0f;
-        //looping through all phases
-        for(int j=0; j<numberOfPhases; j++)
-        {
-            //mixture Density
-            mixDensity2+=(updatePhases.getVolumeFraction(j)*updatePhases.getDensity(j));
-        }
-        for(int j=0; j<numberOfPhases; j++)
-        {
-            if(misc==1)
-            {
-                //mixture pressure * phase volume fraction - NEED TO GET PRESSURE OF EACH PHASE, NOT INDIVIDUAL PARTICLE
-                phasePressureSelf=p->pres*updatePhases.getVolumeFraction(p->phase);
-                phasePressurePhase=p->pres*updatePhases.getVolumeFraction(j);//needs to be automated
-            }
-            else
-            {
-                //may not be pressure of individual particle
-                phasePressureSelf=p->pres;
-                phasePressurePhase=p->pres;
-            }
-            //only when it's not itself
-            if(j!=p->phase)
-            {
-                //interpolated pressure of other phases (summed of all OTHER phases rather than neighbours) - in this case only 2 phases needs changing
-                vec3 interpolatedPressureMix;
-                vec3 interpolatedDensityMix;
-                interpolatedDensityMix.x=updatePhases.getMass(j)*poly6KernelGrad.x;
-                interpolatedDensityMix.y=updatePhases.getMass(j)*poly6KernelGrad.y;
-                interpolatedDensityMix.z=updatePhases.getMass(j)*poly6KernelGrad.z;
-
-                //pressure of other phase minus pressure of current phase
-                if((interpolatedDensityMix.x!=0)&&(interpolatedDensityMix.y!=0)&&(interpolatedDensityMix.z!=0))
+                if(misc==1)
                 {
-                    interpolatedPressureMix.x=(updatePhases.getMass(j)/interpolatedDensityMix.x)*(phasePressurePhase-phasePressureSelf)*spikyKernelGrad.x;
-                    interpolatedPressureMix.y=(updatePhases.getMass(j)/interpolatedDensityMix.y)*(phasePressurePhase-phasePressureSelf)*spikyKernelGrad.y;
-                    interpolatedPressureMix.z=(updatePhases.getMass(j)/interpolatedDensityMix.z)*(phasePressurePhase-phasePressureSelf)*spikyKernelGrad.z;
+                    //mixture pressure * phase volume fraction - NEED TO GET PRESSURE OF EACH PHASE, NOT INDIVIDUAL PARTICLE
+                    phasePressureSelf=p->pres*p->volumeFraction[phase];
+                    phasePressurePhase=p->pres*p->volumeFraction[phase];//needs to be automated
+                }
+                else
+                {
+                    //may not be pressure of individual particle
+                    phasePressureSelf=p->pres;
+                    phasePressurePhase=p->pres;
+                }
+                //only when it's not itself
+                if(j!=p->phase)
+                {
+                    //interpolated pressure of other phases (summed of all OTHER phases rather than neighbours) - in this case only 2 phases needs changing
+                    vec3 interpolatedPressureMix;
+                    vec3 interpolatedDensityMix;
+                    interpolatedDensityMix.x=updatePhases.getMass(j)*poly6KernelGrad.x;
+                    interpolatedDensityMix.y=updatePhases.getMass(j)*poly6KernelGrad.y;
+                    interpolatedDensityMix.z=updatePhases.getMass(j)*poly6KernelGrad.z;
+
+                    //pressure of other phase minus pressure of current phase
+                    if((interpolatedDensityMix.x!=0)&&(interpolatedDensityMix.y!=0)&&(interpolatedDensityMix.z!=0))
+                    {
+                        interpolatedPressureMix.x=(updatePhases.getMass(j)/interpolatedDensityMix.x)*(phasePressurePhase-phasePressureSelf)*spikyKernelGrad.x;
+                        interpolatedPressureMix.y=(updatePhases.getMass(j)/interpolatedDensityMix.y)*(phasePressurePhase-phasePressureSelf)*spikyKernelGrad.y;
+                        interpolatedPressureMix.z=(updatePhases.getMass(j)/interpolatedDensityMix.z)*(phasePressurePhase-phasePressureSelf)*spikyKernelGrad.z;
+                    }
+
+                    //sum of all other phases (volumefraction of phase * phase density)/the mix density and then * phase density
+                    summation2.x+=((p->volumeFraction[phase]*updatePhases.getDensity(j))/mixDensity2)*interpolatedPressureMix.x;
+                    summation2.y+=((p->volumeFraction[phase]*updatePhases.getDensity(j))/mixDensity2)*interpolatedPressureMix.y;
+                    summation2.z+=((p->volumeFraction[phase]*updatePhases.getDensity(j))/mixDensity2)*interpolatedPressureMix.z;
+                }
+            }
+
+                                                       // - sum of other phases values
+            secondPhase.x=strengthFac*(interpolatedPressureInd.x-(summation2.x));
+            secondPhase.y=strengthFac*(interpolatedPressureInd.y-(summation2.y));
+            secondPhase.z=strengthFac*(interpolatedPressureInd.z-(summation2.z));
+
+            //THIRD PHASE OF EQUATION
+            vec3 interpolatedVolFracInd;
+            //reset for each particle
+            interpolatedVolFracInd.x=0.0f;
+            interpolatedVolFracInd.y=0.0f;
+            interpolatedVolFracInd.z=0.0f;
+            //neighbourhood particles
+            for(int j=0; j<int(p->neighbour.size()); j++)
+            {
+                Particle *neighbour;
+                neighbour=(p->neighbour[j]);
+
+                vec3 interpolatedDensityInd;
+                vec3 calc_1;
+
+                // /\Wij - for density interpolation
+                poly6KernelGrad=poly6Grad(p->pos, neighbour->pos);
+
+                //for all other calculations involving derivative of smoothing function
+                spikyKernelGrad=spikyGrad(p->pos, neighbour->pos);
+
+                //following standard method for interpolated density pi=sigma(massj*smoothingkernelfunction)
+                interpolatedDensityInd.x=(p->mass*poly6KernelGrad.x);
+                interpolatedDensityInd.y=(p->mass*poly6KernelGrad.y);
+                interpolatedDensityInd.z=(p->mass*poly6KernelGrad.z);
+
+                //std::cout<<"mass >"<<interpolatedDensityInd.x<<"\n";
+
+                if((interpolatedDensityInd.x!=0.0)&&(interpolatedDensityInd.y!=0.0)&&(interpolatedDensityInd.z!=0.0))
+                {
+                    //calculating first interpolated volume fraction (for individual particles) - using the spiky for other derivatives of smoothing function
+                                                                          //currently these are the same value
+                    calc_1.x = (neighbour->mass/interpolatedDensityInd.x)*(neighbour->volumeFraction[phase]-p->volumeFraction[phase])*spikyKernelGrad.x;
+                    calc_1.y = (neighbour->mass/interpolatedDensityInd.y)*(neighbour->volumeFraction[phase]-p->volumeFraction[phase])*spikyKernelGrad.y;
+                    calc_1.z = (neighbour->mass/interpolatedDensityInd.z)*(neighbour->volumeFraction[phase]-p->volumeFraction[phase])*spikyKernelGrad.z;
+                    //temp for testing
+                    //calc_1.x = (neighbour->mass/interpolatedDensityInd.x)*spikyKernelGrad.x;
+                    //calc_1.y = (neighbour->mass/interpolatedDensityInd.y)*spikyKernelGrad.y;
+                    //calc_1.z = (neighbour->mass/interpolatedDensityInd.z)*spikyKernelGrad.z;
                 }
 
-                //sum of all other phases (volumefraction of phase * phase density)/the mix density and then * phase density
-                summation2.x+=((updatePhases.getVolumeFraction(j)*updatePhases.getDensity(j))/mixDensity2)*interpolatedPressureMix.x;
-                summation2.y+=((updatePhases.getVolumeFraction(j)*updatePhases.getDensity(j))/mixDensity2)*interpolatedPressureMix.y;
-                summation2.z+=((updatePhases.getVolumeFraction(j)*updatePhases.getDensity(j))/mixDensity2)*interpolatedPressureMix.z;
-            }
-        }
-
-                                                   // - sum of other phases values
-        secondPhase.x=strengthFac*(interpolatedPressureInd.x-(summation2.x));
-        secondPhase.y=strengthFac*(interpolatedPressureInd.y-(summation2.y));
-        secondPhase.z=strengthFac*(interpolatedPressureInd.z-(summation2.z));
-
-        //THIRD PHASE OF EQUATION
-        vec3 interpolatedVolFracInd;
-        //reset for each particle
-        interpolatedVolFracInd.x=0.0f;
-        interpolatedVolFracInd.y=0.0f;
-        interpolatedVolFracInd.z=0.0f;
-        //neighbourhood particles
-        for(int j=0; j<int(p->neighbour.size()); j++)
-        {
-            Particle *neighbour;
-            neighbour=(p->neighbour[j]);
-
-            vec3 interpolatedDensityInd;
-            vec3 calc_1;
-
-            // /\Wij - for density interpolation
-            poly6KernelGrad=poly6Grad(p->pos, neighbour->pos);
-
-            //for all other calculations involving derivative of smoothing function
-            spikyKernelGrad=spikyGrad(p->pos, neighbour->pos);
-
-            //following standard method for interpolated density pi=sigma(massj*smoothingkernelfunction)
-            interpolatedDensityInd.x=(p->mass*poly6KernelGrad.x);
-            interpolatedDensityInd.y=(p->mass*poly6KernelGrad.y);
-            interpolatedDensityInd.z=(p->mass*poly6KernelGrad.z);
-
-            //std::cout<<"mass >"<<interpolatedDensityInd.x<<"\n";
-
-            if((interpolatedDensityInd.x!=0.0)&&(interpolatedDensityInd.y!=0.0)&&(interpolatedDensityInd.z!=0.0))
-            {
-                //calculating first interpolated volume fraction (for individual particles) - using the spiky for other derivatives of smoothing function
-                                                                      //currently these are the same value
-                //calc_1.x = (neighbour->mass/interpolatedDensityInd.x)*(neighbour->volFrac-p->volFrac)*spikyKernelGrad.x;
-                //calc_1.y = (neighbour->mass/interpolatedDensityInd.y)*(neighbour->volFrac-p->volFrac)*spikyKernelGrad.y;
-                //calc_1.z = (neighbour->mass/interpolatedDensityInd.z)*(neighbour->volFrac-p->volFrac)*spikyKernelGrad.z;
-                //temp for testing
-                calc_1.x = (neighbour->mass/interpolatedDensityInd.x)*spikyKernelGrad.x;
-                calc_1.y = (neighbour->mass/interpolatedDensityInd.y)*spikyKernelGrad.y;
-                calc_1.z = (neighbour->mass/interpolatedDensityInd.z)*spikyKernelGrad.z;
+                //accumulates to form the sum of all this particles neighbours
+                interpolatedVolFracInd.x+=calc_1.x;
+                interpolatedVolFracInd.y+=calc_1.y;
+                interpolatedVolFracInd.z+=calc_1.z;
             }
 
-            //accumulates to form the sum of all this particles neighbours
-            interpolatedVolFracInd.x+=calc_1.x;
-            interpolatedVolFracInd.y+=calc_1.y;
-            interpolatedVolFracInd.z+=calc_1.z;
-        }
-
-        vec3 summation3;
-        summation3.x=0.0f;
-        summation3.y=0.0f;
-        summation3.z=0.0f;
-        float mixDensity3=0;
-        //looping through all phases
-        for(int j=0; j<numberOfPhases; j++)
-        {
-            //mixture Density
-            mixDensity3+=(updatePhases.getVolumeFraction(j)*updatePhases.getDensity(j));
-        }
-        for(int j=0; j<numberOfPhases; j++)
-        {
-            //only when it's not itself
-            if(j!=p->phase)
+            vec3 summation3;
+            summation3.x=0.0f;
+            summation3.y=0.0f;
+            summation3.z=0.0f;
+            float mixDensity3=0;
+            //looping through all phases
+            for(int j=0; j<numberOfPhases; j++)
             {
-                //interpolated pressure of other phases (summed of all OTHER phases rather than neighbours) - in this case only 2 phases needs changing
-                vec3 interpolatedVolumeMix;
-                vec3 interpolatedDensityMix;
-                //not sure about this, may not be interpolated as its for the other phases - using poly6 for interpolated density
-                interpolatedDensityMix.x=updatePhases.getMass(p->phase)*poly6KernelGrad.x;
-                interpolatedDensityMix.y=updatePhases.getMass(p->phase)*poly6KernelGrad.y;
-                interpolatedDensityMix.z=updatePhases.getMass(p->phase)*poly6KernelGrad.z;
-
-                if((interpolatedDensityMix.x!=0)&&(interpolatedDensityMix.y!=0)&&(interpolatedDensityMix.z!=0))
+                //mixture Density
+                mixDensity3+=(p->volumeFraction[phase]*updatePhases.getDensity(j));
+            }
+            for(int j=0; j<numberOfPhases; j++)
+            {
+                //only when it's not itself
+                if(j!=p->phase)
                 {
-                    //other phase volume fraction - self's volume fraction
-                    interpolatedVolumeMix.x=(updatePhases.getMass(j)/interpolatedDensityMix.x)*(updatePhases.getVolumeFraction(j)-updatePhases.getVolumeFraction(p->phase))*spikyKernelGrad.x;
-                    interpolatedVolumeMix.y=(updatePhases.getMass(j)/interpolatedDensityMix.y)*(updatePhases.getVolumeFraction(j)-updatePhases.getVolumeFraction(p->phase))*spikyKernelGrad.y;
-                    interpolatedVolumeMix.z=(updatePhases.getMass(j)/interpolatedDensityMix.z)*(updatePhases.getVolumeFraction(j)-updatePhases.getVolumeFraction(p->phase))*spikyKernelGrad.z;
+                    //interpolated pressure of other phases (summed of all OTHER phases rather than neighbours) - in this case only 2 phases needs changing
+                    vec3 interpolatedVolumeMix;
+                    vec3 interpolatedDensityMix;
+                    //not sure about this, may not be interpolated as its for the other phases - using poly6 for interpolated density
+                    interpolatedDensityMix.x=updatePhases.getMass(p->phase)*poly6KernelGrad.x;
+                    interpolatedDensityMix.y=updatePhases.getMass(p->phase)*poly6KernelGrad.y;
+                    interpolatedDensityMix.z=updatePhases.getMass(p->phase)*poly6KernelGrad.z;
+
+                    if((interpolatedDensityMix.x!=0)&&(interpolatedDensityMix.y!=0)&&(interpolatedDensityMix.z!=0))
+                    {
+                        //other phase volume fraction - self's volume fraction
+                        interpolatedVolumeMix.x=(updatePhases.getMass(j)/interpolatedDensityMix.x)*(p->volumeFraction[phase]-p->volumeFraction[phase])*spikyKernelGrad.x;
+                        interpolatedVolumeMix.y=(updatePhases.getMass(j)/interpolatedDensityMix.y)*(p->volumeFraction[phase]-p->volumeFraction[phase])*spikyKernelGrad.y;
+                        interpolatedVolumeMix.z=(updatePhases.getMass(j)/interpolatedDensityMix.z)*(p->volumeFraction[phase]-p->volumeFraction[phase])*spikyKernelGrad.z;
+                    }
+
+                    //sum of all other phases (volumefraction of phase * phase density)/the mix density and then multiply by
+                    //gradient of volume fraction/volume fraction of phase
+                    summation3.x+=((p->volumeFraction[phase]*updatePhases.getDensity(j))/mixDensity3)*(interpolatedVolumeMix.x/p->volumeFraction[phase]);
+                    summation3.y+=((p->volumeFraction[phase]*updatePhases.getDensity(j))/mixDensity3)*(interpolatedVolumeMix.y/p->volumeFraction[phase]);
+                    summation3.z+=((p->volumeFraction[phase]*updatePhases.getDensity(j))/mixDensity3)*(interpolatedVolumeMix.z/p->volumeFraction[phase]);
                 }
-
-                //sum of all other phases (volumefraction of phase * phase density)/the mix density and then multiply by
-                //gradient of volume fraction/volume fraction of phase
-                summation3.x+=((updatePhases.getVolumeFraction(j)*updatePhases.getDensity(j))/mixDensity3)*(interpolatedVolumeMix.x/updatePhases.getVolumeFraction(j));
-                summation3.y+=((updatePhases.getVolumeFraction(j)*updatePhases.getDensity(j))/mixDensity3)*(interpolatedVolumeMix.y/updatePhases.getVolumeFraction(j));
-                summation3.z+=((updatePhases.getVolumeFraction(j)*updatePhases.getDensity(j))/mixDensity3)*(interpolatedVolumeMix.z/updatePhases.getVolumeFraction(j));
             }
+                                                                           // - sum of other phases values
+            thirdPhase.x=diffuseConst*((interpolatedVolFracInd.x/p->volumeFraction[phase])-summation3.x);
+            thirdPhase.y=diffuseConst*((interpolatedVolFracInd.y/p->volumeFraction[phase])-summation3.y);
+            thirdPhase.z=diffuseConst*((interpolatedVolFracInd.z/p->volumeFraction[phase])-summation3.z);
+
+            //drift velocity - second phase is where pressure relationship will affect the misc/immiscibility of the mixture
+            //p->driftVelocity.x=firstPhase.x-secondPhase.x-thirdPhase.x;
+            //p->driftVelocity.y=firstPhase.y-secondPhase.y-thirdPhase.y;
+            //p->driftVelocity.z=firstPhase.z-secondPhase.z-thirdPhase.z;
+
+            p->driftVelocity[phase].x=firstPhase.x;
+            p->driftVelocity[phase].y=firstPhase.y;
+            p->driftVelocity[phase].z=firstPhase.z;
+
+            //std::cout<<"drift velocity x >"<<p->driftVelocity.x<<"\n";
+            //std::cout<<"drift velocity y >"<<p->driftVelocity.y<<"\n";
+            //std::cout<<"drift velocity z >"<<p->driftVelocity.z<<"\n";
         }
-                                                                       // - sum of other phases values
-        thirdPhase.x=diffuseConst*((interpolatedVolFracInd.x/p->volFrac)-summation3.x);
-        thirdPhase.y=diffuseConst*((interpolatedVolFracInd.y/p->volFrac)-summation3.y);
-        thirdPhase.z=diffuseConst*((interpolatedVolFracInd.z/p->volFrac)-summation3.z);
-
-        //drift velocity - second phase is where pressure relationship will affect the misc/immiscibility of the mixture
-        p->driftVelocity.x=firstPhase.x-secondPhase.x-thirdPhase.x;
-        p->driftVelocity.y=firstPhase.y-secondPhase.y-thirdPhase.y;
-        p->driftVelocity.z=firstPhase.z-secondPhase.z-thirdPhase.z;
-
-        //std::cout<<"drift velocity x >"<<p->driftVelocity.x<<"\n";
-        //std::cout<<"drift velocity y >"<<p->driftVelocity.y<<"\n";
-        //std::cout<<"drift velocity z >"<<p->driftVelocity.z<<"\n";
     }
 }
 
@@ -829,13 +852,10 @@ void SPHSystem::advection()
 	{
 		p=&(mem[i]);
 
-        p->vel.x=p->vel.x+p->driftVelocity.x*time_step+p->acc.x*time_step/p->dens+gravity.x*time_step;
-        p->vel.y=p->vel.y+p->driftVelocity.y*time_step+p->acc.y*time_step/p->dens+gravity.y*time_step;
-        p->vel.z=p->vel.z+p->driftVelocity.z*time_step+p->acc.z*time_step/p->dens+gravity.z*time_step;
-
-        //p->vel.x=p->vel.x+p->acc.x*time_step/p->dens+gravity.x*time_step;
-        //p->vel.y=p->vel.y+p->acc.y*time_step/p->dens+gravity.y*time_step;
-        //p->vel.z=p->vel.z+p->acc.z*time_step/p->dens+gravity.z*time_step;
+        //original and now drift velocity is directly affecting acceleration
+        p->vel.x=p->vel.x+p->acc.x*time_step/p->dens+gravity.x*time_step;
+        p->vel.y=p->vel.y+p->acc.y*time_step/p->dens+gravity.y*time_step;
+        p->vel.z=p->vel.z+p->acc.z*time_step/p->dens+gravity.z*time_step;
 
         //std::cout<<"Velocity X -> "<<p->vel.x<<"\n";
         //std::cout<<"Velocity Y -> "<<p->vel.y<<"\n";

@@ -11,8 +11,7 @@ phaseData::phaseData()
     phases[0].dens=1300;
     phases[0].individualMass=0.02;
     phases[0].individualVisc=6.5;
-    //volume fraction of phase = number of elements in phase/total particle number = both of these need to be updated after all particles have been added
-    phases[0].volumeFraction=0.0f;
+
     phases[0].numberOfParticles=0;
 
     phases[0].selfDens=phases[0].individualMass*system.poly6_value*pow(system.kernel, 6);
@@ -26,8 +25,7 @@ phaseData::phaseData()
     phases[1].dens=1000;
     phases[1].individualMass=0.03;
     phases[1].individualVisc=300.0;
-    //volume fraction of phase = number of elements in phase/total particle number = both of these need to be updated after all particles have been added
-    phases[1].volumeFraction=0.0f;
+
     phases[1].numberOfParticles=0;
 
     phases[1].selfDens=phases[1].individualMass*system.poly6_value*pow(system.kernel, 6);

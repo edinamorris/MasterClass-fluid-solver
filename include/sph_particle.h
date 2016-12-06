@@ -20,14 +20,16 @@ public:
     vec3 ev;
     vec3 colour;
     int phase;
-    vec3 driftVelocity;
+    //need to be changed so not hard-coded
+    //each particle must have a drift velocity calculated for each phase, so when theres two phases there will be two drift velocities
+    vec3 driftVelocity [2];
+    float volumeFraction [2];
 
     //made these individual for each particle
     float visc;
     float mass;
     float selfDens;
     float lplcColour;
-    float volFrac;
 
     float dens;
     //individual phase density for liquids
