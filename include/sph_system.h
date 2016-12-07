@@ -82,6 +82,8 @@ private:
     float spiky_value;
     float visco_value;
 
+    float restDensityArray [2];
+
     float grad_poly6;
     float grad_spiky;
     uint max_particle;
