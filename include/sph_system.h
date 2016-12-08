@@ -58,17 +58,21 @@ public:
     void damnScenario();
     void dropScenario();
     void add_particle(int _phase, vec3 pos, vec3 vel);
+    //interpolated density use
+    float poly6(vec3 position_n, vec3 position_p);
     //returns gradient
     vec3 poly6Grad(vec3 _iPos, vec3 _jPos);
     vec3 spikyGrad(vec3 _iPos, vec3 _jPos);
 
-    //functions
+    vec3 MixturePressure();
 private:
 	void build_table();
 	void comp_dens_pres();
 	void comp_force_adv();
     void driftVelocity();
 	void advection();
+    void advectVolumeFractions();
+    void correctVolumeFraction();
 
     //variables
 private:
