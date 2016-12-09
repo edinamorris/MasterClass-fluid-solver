@@ -73,6 +73,7 @@ private:
 	void advection();
     void advectVolumeFractions();
     void correctVolumeFraction();
+    void updateColour();
 
     //variables
 private:

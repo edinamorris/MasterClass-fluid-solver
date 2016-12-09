@@ -32,6 +32,7 @@ public:
     //float getVolumeFraction(int _phaseParticle, int _phaseSystem){return phases[_phase].volumeFraction[_phaseSystem];}
     float getDensity(int _phase){return phases[_phase].dens;}
     float getMass(int _phase){return phases[_phase].individualMass;}
+    vec3 getColour(int _phase){return phases[_phase].colour;}
 
     void addParticle(int _phase){phases[_phase].numberOfParticles+=1;}
 

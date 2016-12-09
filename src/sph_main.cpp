@@ -279,19 +279,16 @@ void keyboard_func(unsigned char key, int x, int y)
     if(key == '1')
     {
         sph->loadScenario(1);
-        //sph->init_system();
     }
     //dam
     if(key == '2' )
     {
         sph->loadScenario(2);
-        //sph->damnScenario();
     }
     //drop
     if(key == '3')
     {
         sph->loadScenario(3);
-        //sph->dropScenario();
     }
 	if(key == 'w')
 	{
