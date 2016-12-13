@@ -122,6 +122,7 @@ void SPHSystem::animation()
     correctVolumeFraction();
     //step4 - acceleration
     comp_force_adv();
+    //step 5 - advect acceleration and velocity
 	advection();
 }
 
@@ -294,14 +295,14 @@ void SPHSystem::add_particle(int _phase, vec3 pos, vec3 vel)
     if(_phase==0)
     {
         //if particle starts in liquid 0 then it will be completely in liquid 0, no mixing has occurerd
-        p->volumeFraction[0]=1.0f;
-        p->volumeFraction[1]=0.0f;
+        p->volumeFraction[0]=0.99f;
+        p->volumeFraction[1]=0.01f;
     }
     else if(_phase==1)
     {
         //opposite if starts in liquid 1
-        p->volumeFraction[0]=0.0f;
-        p->volumeFraction[1]=1.0f;
+        p->volumeFraction[0]=0.01f;
+        p->volumeFraction[1]=0.99f;
     }
 
     p->pres=0.0f;
@@ -440,7 +441,7 @@ void SPHSystem::comp_dens_pres()
 //comment out acceleration here, needs to be calculated after drift velocity with multiple fluid method
 //Calculate the acceleration of the mixture particle according to Eq. (8). SPH formulations
 //of the related terms are provided in Eqs. (19)–(21).
-void SPHSystem::comp_force_adv()
+/*void SPHSystem::comp_force_adv()
 {
 	Particle *p;
 	Particle *np;
@@ -548,6 +549,181 @@ void SPHSystem::comp_force_adv()
 			p->acc.z+=surf_coe * lplc_color * grad_color.z / p->surf_norm;
 		}
 	}
+}*/
+
+//Calculate the acceleration of the mixture particle according to Eq. (8). SPH formulations
+//of the related terms are provided in Eqs. (19)–(21).
+void SPHSystem::comp_force_adv()
+{
+    Particle *p;
+    for(int i=0; i<num_particle; i++)
+    {
+        p=&(mem[i]);
+
+        //p->acc.x=0.0f;
+        //p->acc.y=0.0f;
+        //p->acc.z=0.0f;
+        vec3 firstPhase;
+        vec3 secondPhase;
+        vec3 thirdPhase;
+        firstPhase.x=0.0f;
+        firstPhase.y=0.0f;
+        firstPhase.z=0.0f;
+        secondPhase.x=0.0f;
+        secondPhase.y=0.0f;
+        secondPhase.z=0.0f;
+        thirdPhase.x=0.0f;
+        thirdPhase.y=0.0f;
+        thirdPhase.z=0.0f;
+
+        //first phase - equation 20
+        vec3 summation;
+        summation.x=0.0f;
+        summation.y=0.0f;
+        summation.z=0.0f;
+        float interpolatedDensity=0.0f;
+        vec3 smoothingKernel;
+        smoothingKernel.x=0.0f;
+        smoothingKernel.y=0.0f;
+        smoothingKernel.z=0.0f;
+        float poly6Kernel;
+        //neighbourhood particles
+        for(int j=0; j<int(p->neighbour.size()); j++)
+        {
+            Particle *neighbour;
+            neighbour=(p->neighbour[j]);
+
+            // Wij - for density interpolation - changed to scalar after teemu's discovery
+            poly6Kernel=poly6(p->pos, neighbour->pos);
+
+            //for all other calculations involving derivative of smoothing function
+            smoothingKernel=spikyGrad(p->pos, neighbour->pos);
+
+            //now scalar value
+            interpolatedDensity=(neighbour->mass*poly6Kernel);
+
+            summation.x+=neighbour->mass*(p->pres+neighbour->pres/2*interpolatedDensity)*smoothingKernel.x;
+            summation.y+=neighbour->mass*(p->pres+neighbour->pres/2*interpolatedDensity)*smoothingKernel.y;
+            summation.z+=neighbour->mass*(p->pres+neighbour->pres/2*interpolatedDensity)*smoothingKernel.z;
+        }
+        firstPhase.x=summation.x/p->restdens;
+        firstPhase.y=summation.y/p->restdens;
+        firstPhase.z=summation.z/p->restdens;
+
+        //second phase - equation 21
+        vec3 summation2;
+        summation2.x=0.0f;
+        summation2.y=0.0f;
+        summation2.z=0.0f;
+        //neighbourhood particles
+        for(int j=0; j<int(p->neighbour.size()); j++)
+        {
+            Particle *neighbour;
+            neighbour=(p->neighbour[j]);
+
+            // Wij - for density interpolation - changed to scalar after teemu's discovery
+            poly6Kernel=poly6(p->pos, neighbour->pos);
+
+            //for all other calculations involving derivative of smoothing function
+            smoothingKernel=spikyGrad(p->pos, neighbour->pos);
+
+            //now scalar value
+            interpolatedDensity=(neighbour->mass*poly6Kernel);
+
+            //checks
+            if(interpolatedDensity==0)
+            {
+                interpolatedDensity=0.1;
+            }
+            vec3 positionDiff;
+            positionDiff.x=neighbour->pos.x-p->pos.x;
+            positionDiff.y=neighbour->pos.y-p->pos.y;
+            positionDiff.z=neighbour->pos.z-p->pos.z;
+            if(positionDiff.x==0)
+            {
+                positionDiff.x=0.01;
+            }
+            else if(positionDiff.y==0)
+            {
+                positionDiff.y=0.01;
+            }
+            else if(positionDiff.z==0)
+            {
+                positionDiff.z=0.01;
+            }
+
+            summation2.x=neighbour->mass/interpolatedDensity*(p->visc+neighbour->visc)*(neighbour->vel.x-p->vel.x)*
+                    ((neighbour->pos.x-p->pos.x)*(smoothingKernel.x)/(positionDiff.x)*(neighbour->pos.x-p->pos.x));
+            summation2.y=neighbour->mass/interpolatedDensity*(p->visc+neighbour->visc)*(neighbour->vel.y-p->vel.y)*
+                    ((neighbour->pos.y-p->pos.y)*(smoothingKernel.y)/(positionDiff.y)*(neighbour->pos.y-p->pos.y));
+            summation2.z=neighbour->mass/interpolatedDensity*(p->visc+neighbour->visc)*(neighbour->vel.z-p->vel.z)*
+                    ((neighbour->pos.z-p->pos.z)*(smoothingKernel.z)/(positionDiff.z)*(neighbour->pos.z-p->pos.z));
+
+            std::cout<<"testing x > "<<positionDiff.x<<"\n";
+            std::cout<<"testing y > "<<positionDiff.y<<"\n";
+            std::cout<<"testing z > "<<positionDiff.z<<"\n";
+        }
+        secondPhase.x=summation2.x/p->restdens;
+        secondPhase.y=summation2.y/p->restdens;
+        secondPhase.z=summation2.z/p->restdens;
+
+        //std::cout<<"testing x > "<<secondPhase.x<<"\n";
+        //std::cout<<"testing y > "<<secondPhase.y<<"\n";
+        //std::cout<<"testing z > "<<secondPhase.z<<"\n";
+
+        //third phase - equation 19
+        vec3 summation3;
+        summation3.x=0.0f;
+        summation3.y=0.0f;
+        summation3.z=0.0f;
+        vec3 summationPhase;
+        //neighbourhood particles
+        for(int j=0; j<int(p->neighbour.size()); j++)
+        {
+            Particle *neighbour;
+            neighbour=(p->neighbour[j]);
+
+            // Wij - for density interpolation - changed to scalar after teemu's discovery
+            poly6Kernel=poly6(p->pos, neighbour->pos);
+
+            //for all other calculations involving derivative of smoothing function
+            smoothingKernel=spikyGrad(p->pos, neighbour->pos);
+
+            //now scalar value
+            interpolatedDensity=(neighbour->mass*poly6Kernel);
+
+            //resetting for new neighbour particle
+            summationPhase.x=0.0f;
+            summationPhase.y=0.0f;
+            summationPhase.z=0.0f;
+
+            //go through phases
+            for(int phase=0; phase<numberOfPhases; phase++)
+            {
+                summationPhase.x+=neighbour->restdens*(neighbour->volumeFraction[phase]*neighbour->driftVelocity[phase].x*(neighbour->driftVelocity[phase].x*smoothingKernel.x))+
+                        (p->volumeFraction[phase]*p->driftVelocity[phase].x*(p->driftVelocity[phase].x*smoothingKernel.x));
+                summationPhase.y+=neighbour->restdens*(neighbour->volumeFraction[phase]*neighbour->driftVelocity[phase].y*(neighbour->driftVelocity[phase].y*smoothingKernel.z))+
+                        (p->volumeFraction[phase]*p->driftVelocity[phase].y*(p->driftVelocity[phase].y*smoothingKernel.y));
+                summationPhase.z+=neighbour->restdens*(neighbour->volumeFraction[phase]*neighbour->driftVelocity[phase].z*(neighbour->driftVelocity[phase].y*smoothingKernel.z))+
+                        (p->volumeFraction[phase]*p->driftVelocity[phase].z*(p->driftVelocity[phase].z*smoothingKernel.z));
+            }
+
+            summation3.x+=neighbour->mass/interpolatedDensity*summationPhase.x;
+            summation3.y+=neighbour->mass/interpolatedDensity*summationPhase.y;
+            summation3.z+=neighbour->mass/interpolatedDensity*summationPhase.z;
+
+        }
+        thirdPhase.x=-summation3.x/p->restdens;
+        thirdPhase.y=-summation3.y/p->restdens;
+        thirdPhase.z=-summation3.z/p->restdens;
+
+        p->acc.x=gravity.x-1*(-firstPhase.x+gravity.x+secondPhase.x+thirdPhase.x);
+        p->acc.y=gravity.y-1*(-firstPhase.y+gravity.y+secondPhase.y+thirdPhase.y);
+        p->acc.z=gravity.z-1*(-firstPhase.z+gravity.z+secondPhase.z+thirdPhase.z);
+        //std::cout<<"acceleration x > "<<p->acc.x<<"\n";
+        //std::cout<<"acceleration x > "<<p->acc.y<<"\n";
+        //std::cout<<"acceleration x > "<<p->acc.z<<"\n";
+    }
 }
 
 vec3 SPHSystem::MixturePressure()
