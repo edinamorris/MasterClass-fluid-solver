@@ -117,9 +117,9 @@ void SPHSystem::animation()
     //step1
     driftVelocity();
     //step2
-    advectVolumeFractions();
+    //advectVolumeFractions();
     //step3
-    correctVolumeFraction();
+    //correctVolumeFraction();
     //step4 - acceleration
     comp_force_adv();
     //step 5 - advect acceleration and velocity
@@ -653,15 +653,11 @@ void SPHSystem::comp_force_adv()
             }
 
             summation2.x=neighbour->mass/interpolatedDensity*(p->visc+neighbour->visc)*(neighbour->vel.x-p->vel.x)*
-                    ((neighbour->pos.x-p->pos.x)*(smoothingKernel.x)/(positionDiff.x)*(neighbour->pos.x-p->pos.x));
+                    ((positionDiff.x)*(smoothingKernel.x)/(positionDiff.x)*(positionDiff.x));
             summation2.y=neighbour->mass/interpolatedDensity*(p->visc+neighbour->visc)*(neighbour->vel.y-p->vel.y)*
-                    ((neighbour->pos.y-p->pos.y)*(smoothingKernel.y)/(positionDiff.y)*(neighbour->pos.y-p->pos.y));
+                    ((positionDiff.y)*(smoothingKernel.y)/(positionDiff.y)*(positionDiff.y));
             summation2.z=neighbour->mass/interpolatedDensity*(p->visc+neighbour->visc)*(neighbour->vel.z-p->vel.z)*
-                    ((neighbour->pos.z-p->pos.z)*(smoothingKernel.z)/(positionDiff.z)*(neighbour->pos.z-p->pos.z));
-
-            std::cout<<"testing x > "<<positionDiff.x<<"\n";
-            std::cout<<"testing y > "<<positionDiff.y<<"\n";
-            std::cout<<"testing z > "<<positionDiff.z<<"\n";
+                    ((positionDiff.z)*(smoothingKernel.z)/(positionDiff.z)*(positionDiff.z));
         }
         secondPhase.x=summation2.x/p->restdens;
         secondPhase.y=summation2.y/p->restdens;
