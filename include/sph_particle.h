@@ -19,12 +19,12 @@ public:
     vec3 acc;
     vec3 ev;
     vec3 colour;
-    vec3 updatedColour;
     int phase;
     //need to be changed so not hard-coded
     //each particle must have a drift velocity calculated for each phase, so when theres two phases there will be two drift velocities
     vec3 driftVelocity [2];
     float volumeFraction [2];
+    float prevVolumeFraction [2];
 
     //made these individual for each particle
     float visc;

@@ -117,9 +117,9 @@ void SPHSystem::animation()
     //step1
     driftVelocity();
     //step2
-    //advectVolumeFractions();
+    advectVolumeFractions();
     //step3
-    //correctVolumeFraction();
+    correctVolumeFraction();
     //step4 - acceleration
     comp_force_adv();
     //step 5 - advect acceleration and velocity
@@ -274,6 +274,7 @@ void SPHSystem::add_particle(int _phase, vec3 pos, vec3 vel)
     p->lplcColour=updatePhases.phases[_phase].self_lplc_color;
     p->restdens=updatePhases.phases[_phase].dens;
     p->dens=p->restdens;
+    p->phase=_phase;
     //adding to the phase counter
     updatePhases.addParticle(_phase);
 
@@ -291,19 +292,8 @@ void SPHSystem::add_particle(int _phase, vec3 pos, vec3 vel)
         p->driftVelocity[i].z=0.0f;
     }
 
-    //TEMP initial volume fraction
-    if(_phase==0)
-    {
-        //if particle starts in liquid 0 then it will be completely in liquid 0, no mixing has occurerd
-        p->volumeFraction[0]=0.99f;
-        p->volumeFraction[1]=0.01f;
-    }
-    else if(_phase==1)
-    {
-        //opposite if starts in liquid 1
-        p->volumeFraction[0]=0.01f;
-        p->volumeFraction[1]=0.99f;
-    }
+    //setting original volume fraction and mass
+    p->volumeFraction[_phase]=1.0f;
 
     p->pres=0.0f;
 
@@ -351,16 +341,12 @@ void SPHSystem::updateColour()
     for(int i=0; i<num_particle; i++)
     {
         p=&(mem[i]);
-        p->updatedColour=vec3(0,0,0);
-    }
-    for(int phase=0; phase<numberOfPhases; phase++)
-    {
-        for(int i=0; i<num_particle; i++)
+        vec3 updatedColour=vec3();
+        for(int phase=0; phase<numberOfPhases; phase++)
         {
-            p=&(mem[i]);
-            p->updatedColour+=updatePhases.getColour(phase)*p->volumeFraction[phase];
+            updatedColour+=updatePhases.getColour(phase)*p->volumeFraction[phase];
 
-            p->colour=p->updatedColour;
+            p->colour=updatedColour;
         }
     }
 }
@@ -441,7 +427,7 @@ void SPHSystem::comp_dens_pres()
 //comment out acceleration here, needs to be calculated after drift velocity with multiple fluid method
 //Calculate the acceleration of the mixture particle according to Eq. (8). SPH formulations
 //of the related terms are provided in Eqs. (19)–(21).
-/*void SPHSystem::comp_force_adv()
+void SPHSystem::comp_force_adv()
 {
 	Particle *p;
 	Particle *np;
@@ -549,11 +535,11 @@ void SPHSystem::comp_dens_pres()
 			p->acc.z+=surf_coe * lplc_color * grad_color.z / p->surf_norm;
 		}
 	}
-}*/
+}
 
 //Calculate the acceleration of the mixture particle according to Eq. (8). SPH formulations
 //of the related terms are provided in Eqs. (19)–(21).
-void SPHSystem::comp_force_adv()
+/*void SPHSystem::comp_force_adv()
 {
     Particle *p;
     for(int i=0; i<num_particle; i++)
@@ -720,7 +706,7 @@ void SPHSystem::comp_force_adv()
         //std::cout<<"acceleration x > "<<p->acc.y<<"\n";
         //std::cout<<"acceleration x > "<<p->acc.z<<"\n";
     }
-}
+}*/
 
 vec3 SPHSystem::MixturePressure()
 {
@@ -1036,19 +1022,10 @@ void SPHSystem::driftVelocity()
             }
 
             vec3 VolFrac;
-            //TESTING
-            if(p->volumeFraction[phase]==0)
-            {
-                VolFrac.x=0.0;
-                VolFrac.y=0.0;
-                VolFrac.z=0.0;
-            }
-            else
-            {
-                VolFrac.x=interpolatedVolFracInd.x/p->volumeFraction[phase];
-                VolFrac.y=interpolatedVolFracInd.y/p->volumeFraction[phase];
-                VolFrac.z=interpolatedVolFracInd.z/p->volumeFraction[phase];
-            }
+
+            VolFrac.x=interpolatedVolFracInd.x/p->volumeFraction[phase];
+            VolFrac.y=interpolatedVolFracInd.y/p->volumeFraction[phase];
+            VolFrac.z=interpolatedVolFracInd.z/p->volumeFraction[phase];
 
                                                                            // - sum of other phases values
             thirdPhase.x=diffuseConst*((VolFrac.x)-summation3.x);
@@ -1101,16 +1078,17 @@ void SPHSystem::advectVolumeFractions()
                                  p->volumeFraction[phase]*(neighDV.dot(neighDV)));
 
                 eqs17+=(neighbour->mass/interpolateDensity)*((diffvolfrac)*(neighbour->vel-p->vel).dot(spikyGradient));
-                eqs18+=((neighbour->mass/interpolateDensity)*(volumeFracDrift)*(spikyGradient.dot(spikyGradient)));
+                //turning this on causes nan and infinity
+                //eqs18+=((neighbour->mass/interpolateDensity)*(volumeFracDrift)*(spikyGradient.dot(spikyGradient)));
                 //std::cout<<"test value > "<<(neighbour->volumeFraction[phase])<<"\n";
             }
-            bool notANumberCheck=std::isnan(p->volumeFraction[phase]-0.001*(eqs17-eqs18));
+            /*bool notANumberCheck=std::isnan(p->volumeFraction[phase]-0.001*(eqs17-eqs18));
             bool infinityCheck=std::isinf(p->volumeFraction[phase]-0.001*(eqs17-eqs18));
             if((notANumberCheck==false)&&(infinityCheck==false))
             {
                 p->volumeFraction[phase]=p->volumeFraction[phase]-eqs17-eqs18;
-            }
-            //p->volumeFraction[phase]=p->volumeFraction[phase]-0.001*(eqs17-eqs18);
+            }*/
+            p->volumeFraction[phase]=p->volumeFraction[phase]-(eqs17-eqs18);
             //std::cout<<"volume fraction > "<<p->volumeFraction[phase]-0.01*(eqs17-eqs18)<<"\n";
             //std::cout<<"volume fraction > "<<p->volumeFraction[phase]<<"\n";
         }
@@ -1132,20 +1110,34 @@ void SPHSystem::correctVolumeFraction()
         {
             if(p->volumeFraction[phase]<0)
             {
-                p->volumeFraction[phase]=0.001f;
+                p->volumeFraction[phase]=0.0f;
             }
             //adding all volume fraction values of a particle for every phase
             volumeFraction+=p->volumeFraction[phase];
         }
-
-        //checking if values add up - NEEDS CHECKING
-        if(volumeFraction!=1.0)
+        if(volumeFraction>=0.0f&&volumeFraction<=0.01)
         {
+            p->volumeFraction[p->phase]=1.0f;
+            for(int k=0; k<numberOfPhases; k++)
+            {
+                if(p->phase!=k)
+                {
+                    p->volumeFraction[k]=0.0f;
+                }
+            }
+        }
+        //checking if values add up
+        else if(volumeFraction!=1.0)
+        {
+            float pressureAdjustment=0.0f;
             float scale=1.0/volumeFraction;
             for(int phase=0; phase<numberOfPhases; phase++)
             {
                 p->volumeFraction[phase]=p->volumeFraction[phase]*scale;
+                pressureAdjustment+=-gas_constant*updatePhases.getDensity(phase)*(p->volumeFraction[phase]-p->prevVolumeFraction[phase]);
             }
+            //CRAY CRAY
+            //p->pres=p->pres+pressureAdjustment;
         }
     }
 }
@@ -1157,7 +1149,14 @@ float SPHSystem::poly6(vec3 position_p, vec3 position_n)
     double r2 = diffPositions.dot(diffPositions);
     double kernelSquared = kernel*kernel;
 
-    return poly6_value * pow(kernelSquared-r2, 3);
+    if(r2 > kernelSquared || r2 < 0.0f)
+    {
+            return 0.0;
+    }
+    else
+    {
+        return poly6_value * pow(kernelSquared-r2, 3);
+    }
 }
 
 vec3 SPHSystem::poly6Grad(vec3 _iPos, vec3 _jPos)
@@ -1165,8 +1164,16 @@ vec3 SPHSystem::poly6Grad(vec3 _iPos, vec3 _jPos)
     vec3 gradient;
     vec3 diffPos=_iPos-_jPos;
     float radiusSquared=diffPos.dot(diffPos);
+    double kernelSquared = kernel*kernel;
 
-    gradient=grad_poly6*pow((kernel*kernel)-radiusSquared, 2)*diffPos;
+    if(radiusSquared > kernelSquared || radiusSquared < 0)
+    {
+        gradient = vec3();
+    }
+    else
+    {
+        gradient=grad_poly6*pow((kernel*kernel)-radiusSquared, 2)*diffPos;
+    }
     return gradient;
 }
 
@@ -1177,7 +1184,14 @@ vec3 SPHSystem::spikyGrad(vec3 _iPos, vec3 _jPos)
     vec3 diffPos=_iPos-_jPos;
     float radius=sqrt(diffPos.dot(diffPos));
 
-    gradient=grad_spiky*pow(kernel-radius,2)*diffPos/radius;
+    if(radius > kernel || radius <= 0)
+    {
+        gradient = vec3();
+    }
+    else
+    {
+        gradient=grad_spiky*pow(kernel-radius,2)*diffPos/radius;
+    }
     return gradient;
 }
 
