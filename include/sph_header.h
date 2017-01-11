@@ -30,5 +30,6 @@
 #define PI 3.141592f
 #define INF 1E-12f
 #define BOUNDARY 0.0001f
+#define PHASES 2
 
 #endif

@@ -12,12 +12,7 @@ struct Phase
     float selfDens;
     float self_lplc_color;
     float dens;
-    //need to change so it can handle multiple fluids
-    //also probably should be stored in particle, so each particle has these values not each phase
-    //float volumeFraction [2];
-
-    //probably not needed anymore volume fraction is calculated in a different way
-    int numberOfParticles; //in this phase
+    int numberOfParticles;
 };
 
 class phaseData
@@ -29,16 +24,12 @@ public:
     Phase *phases = new Phase[system.getNumPhases()];
 
     int getNumberOfParticles(int _phase){return phases[_phase].numberOfParticles;}
-    //float getVolumeFraction(int _phaseParticle, int _phaseSystem){return phases[_phase].volumeFraction[_phaseSystem];}
     float getDensity(int _phase){return phases[_phase].dens;}
     float getMass(int _phase){return phases[_phase].individualMass;}
     vec3 getColour(int _phase){return phases[_phase].colour;}
 
     void addParticle(int _phase){phases[_phase].numberOfParticles+=1;}
 
-    //need to have these updated after all particles have been added
-    //void setVolumeFraction(float _volFrac, int _phase){phases[_phase].volumeFraction=_volFrac;}
-    //void setNumberOfParticles(int _numPart, int _phase){phases[_phase].numberOfParticles=_numPart;}
 private:
 
 };

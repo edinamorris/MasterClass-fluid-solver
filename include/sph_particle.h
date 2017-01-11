@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include "sph_header.h"
 #include "sph_type.h"
 #include "vector"
 #include "vec3.h"
@@ -20,24 +21,23 @@ public:
     vec3 ev;
     vec3 colour;
     int phase;
+    int misc;
     //need to be changed so not hard-coded
     //each particle must have a drift velocity calculated for each phase, so when theres two phases there will be two drift velocities
-    vec3 driftVelocity [2];
-    float volumeFraction [2];
-    float prevVolumeFraction [2];
+    vec3 driftVelocity [PHASES];
+    float volumeFraction [PHASES];
+    float prevVolumeFraction [PHASES];
 
-    //made these individual for each particle
+    //each have individual values set
     float visc;
     float mass;
     float selfDens;
-    float lplcColour;
-
     float dens;
-    //individual phase density for liquids
     float restdens;
     float pres;
 
     float surf_norm;
+    float lplcColour;
 
     //neighbour vector
     std::vector<Particle*> neighbour;

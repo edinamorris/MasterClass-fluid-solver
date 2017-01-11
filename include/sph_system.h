@@ -57,11 +57,7 @@ public:
 	void init_system();
     void damnScenario();
     void dropScenario();
-    void add_particle(int _phase, vec3 pos, vec3 vel);
-    //interpolated density use
-    float poly6(vec3 position_n, vec3 position_p);
-    //returns gradient
-    vec3 poly6Grad(vec3 _iPos, vec3 _jPos);
+    void add_particle(int _phase, vec3 pos, vec3 vel, int misc);
     vec3 spikyGrad(vec3 _iPos, vec3 _jPos);
 
     vec3 MixturePressure();
@@ -87,8 +83,6 @@ private:
     float spiky_value;
     float visco_value;
 
-    float restDensityArray [2];
-
     float grad_poly6;
     float grad_spiky;
     uint max_particle;
@@ -103,8 +97,6 @@ private:
     float time_step;
     float surf_norm;
     float surf_coe;
-
-    int misc;
 };
 
 #endif
