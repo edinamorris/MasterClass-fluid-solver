@@ -1,4 +1,4 @@
-/** File:		sph_type.h
+/** File:		SphHeader.h
  ** Author:		Dongli Zhang
  ** Contact:	dongli.zhang0129@gmail.com
  **
@@ -19,23 +19,22 @@
  ** Foundation, 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#ifndef __SPHTYPE_H__
-#define __SPHTYPE_H__
+/// \file SphHeader.h
+/// \brief Definitions
+/// \author Dongli Zhang modified by Edina Morris
 
-typedef unsigned int uint;
+#ifndef SPHHEADER_H_
+#define SPHHEADER_H_
 
-struct int3
-{
-	int x;
-	int y;
-	int z;
-};
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <time.h>
 
-struct uint3
-{
-	uint x;
-	uint y;
-	uint z;
-};
+#define PI 3.141592f
+#define INF 1E-12f
+#define BOUNDARY 0.0001f
+//number of phases
+#define PHASES 2
 
-#endif
+#endif //SPHHEADER_H_

@@ -19,9 +19,10 @@
  ** Foundation, 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include "sph_header.h"
-#include "sph_data.h"
-#include "sph_system.h"
+/// \file SphMain.cpp
+/// \brief Drawing code and initial OpenGL and camera setup
+/// \author Dongli Zhang modified by Edina Morris
+
 #include <GL/glew.h>
 #include <string.h>
 
@@ -32,13 +33,15 @@
 #include <GL/glut.h>
 #endif
 
+#include "SphHeader.h"
+#include "SphData.h"
+#include "SphSystem.h"
+
 SPHSystem *sph;
 
-GLuint v;
-GLuint f;
-GLuint p;
+GLuint v, f, p;
 
-void set_shaders()
+void setShaders()
 {
 	char *vs=NULL;
 	char *fs=NULL;
@@ -113,87 +116,91 @@ void set_shaders()
 	free(fs);
 }
 
-void draw_box(float ox, float oy, float oz, float width, float height, float length)
+//drawing boundary using info from sph_data.h
+void drawBox(float _ox, float _oy, float _oz, float _width, float _height, float _length)
 {
     glLineWidth(1.0f);
     glColor3f(0.0f, 0.0f, 0.0f);
 
     glBegin(GL_LINES);   
 		
-        glVertex3f(ox, oy, oz);
-        glVertex3f(ox+width, oy, oz);
+        glVertex3f(_ox, _oy, _oz);
+        glVertex3f(_ox+_width, _oy, _oz);
 
-        glVertex3f(ox, oy, oz);
-        glVertex3f(ox, oy+height, oz);
+        glVertex3f(_ox, _oy, _oz);
+        glVertex3f(_ox, _oy+_height, _oz);
 
-        glVertex3f(ox, oy, oz);
-        glVertex3f(ox, oy, oz+length);
+        glVertex3f(_ox, _oy, _oz);
+        glVertex3f(_ox, _oy, _oz+_length);
 
-        glVertex3f(ox+width, oy, oz);
-        glVertex3f(ox+width, oy+height, oz);
+        glVertex3f(_ox+_width, _oy, _oz);
+        glVertex3f(_ox+_width, _oy+_height, _oz);
 
-        glVertex3f(ox+width, oy+height, oz);
-        glVertex3f(ox, oy+height, oz);
+        glVertex3f(_ox+_width, _oy+_height, _oz);
+        glVertex3f(_ox, _oy+_height, _oz);
 
-        glVertex3f(ox, oy+height, oz+length);
-        glVertex3f(ox, oy, oz+length);
+        glVertex3f(_ox, _oy+_height, _oz+_length);
+        glVertex3f(_ox, _oy, _oz+_length);
 
-        glVertex3f(ox, oy+height, oz+length);
-        glVertex3f(ox, oy+height, oz);
+        glVertex3f(_ox, _oy+_height, _oz+_length);
+        glVertex3f(_ox, _oy+_height, _oz);
 
-        glVertex3f(ox+width, oy, oz);
-        glVertex3f(ox+width, oy, oz+length);
+        glVertex3f(_ox+_width, _oy, _oz);
+        glVertex3f(_ox+_width, _oy, _oz+_length);
 
-        glVertex3f(ox, oy, oz+length);
-        glVertex3f(ox+width, oy, oz+length);
+        glVertex3f(_ox, _oy, _oz+_length);
+        glVertex3f(_ox+_width, _oy, _oz+_length);
 
-        glVertex3f(ox+width, oy+height, oz);
-        glVertex3f(ox+width, oy+height, oz+length);
+        glVertex3f(_ox+_width, _oy+_height, _oz);
+        glVertex3f(_ox+_width, _oy+_height, _oz+_length);
 
-        glVertex3f(ox+width, oy+height, oz+length);
-        glVertex3f(ox+width, oy, oz+length);
+        glVertex3f(_ox+_width, _oy+_height, _oz+_length);
+        glVertex3f(_ox+_width, _oy, _oz+_length);
 
-        glVertex3f(ox, oy+height, oz+length);
-        glVertex3f(ox+width, oy+height, oz+length);
+        glVertex3f(_ox, _oy+_height, _oz+_length);
+        glVertex3f(_ox+_width, _oy+_height, _oz+_length);
 
     glEnd();
 }
 
-void init_sph_system()
+void initSphSystem()
 {
-	real_world_origin.x=-10.0f;
-	real_world_origin.y=-10.0f;
-	real_world_origin.z=-10.0f;
+    realWorldOrigin.m_x=-10.0f;
+    realWorldOrigin.m_y=-10.0f;
+    realWorldOrigin.m_z=-10.0f;
 
-    real_world_side.x=8.0f;
-    real_world_side.y=8.0f;
-    real_world_side.z=8.0f;
+    realWorldSide.m_x=8.0f;
+    realWorldSide.m_y=8.0f;
+    realWorldSide.m_z=8.0f;
 
 	sph=new SPHSystem();
+    sph->loadScenario(2);
 }
 
+//camera setup
 void init()
 {
 	glewInit();
 
-	glViewport(0, 0, window_width, window_height);
+    glViewport(0, 0, windowWidth, windowHeight);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
-    gluPerspective(45.0, (float)window_width/window_height, 0.1f, 100.0);
+    gluPerspective(45.0, (float)windowWidth/windowHeight, 0.1f, 100.0);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 }
 
-void init_ratio()
+void initRatio()
 {
-    sim_ratio.x=real_world_side.x/sph->getWorldSize().x;
-    sim_ratio.y=real_world_side.y/sph->getWorldSize().y;
-    sim_ratio.z=real_world_side.z/sph->getWorldSize().z;
+    simRatio.m_x=realWorldSide.m_x/sph->getWorldSize().m_x;
+    simRatio.m_y=realWorldSide.m_y/sph->getWorldSize().m_y;
+    simRatio.m_z=realWorldSide.m_z/sph->getWorldSize().m_z;
 }
 
-void render_particles()
+//using position and colour calculated in sph_system.cpp
+void renderParticles()
 {
     glPointSize(1.0f);
 
@@ -202,16 +209,16 @@ void render_particles()
         glBegin(GL_POINTS);
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glColor3f(sph->mem[i].colour.x, sph->mem[i].colour.y, sph->mem[i].colour.z);
-            glVertex3f(sph->mem[i].pos.x*sim_ratio.x+real_world_origin.x,
-                        sph->mem[i].pos.y*sim_ratio.y+real_world_origin.y,
-                        sph->mem[i].pos.z*sim_ratio.z+real_world_origin.z);
+        glColor3f(sph->mem[i].m_colour.m_x, sph->mem[i].m_colour.m_y, sph->mem[i].m_colour.m_z);
+        glVertex3f(sph->mem[i].m_pos.m_x*simRatio.m_x+realWorldOrigin.m_x,
+                   sph->mem[i].m_pos.m_y*simRatio.m_y+realWorldOrigin.m_y,
+                   sph->mem[i].m_pos.m_z*simRatio.m_z+realWorldOrigin.m_z);
         glEnd();
     }
 
 }
 
-void display_func()
+void displayFunc()
 {
     glEnable(GL_POINT_SMOOTH);
 
@@ -236,10 +243,10 @@ void display_func()
 	sph->animation();
 
     glUseProgram(p);
-    render_particles();
+    renderParticles();
 
 	glUseProgram(0);
-	draw_box(real_world_origin.x, real_world_origin.y, real_world_origin.z, real_world_side.x, real_world_side.y, real_world_side.z);
+    drawBox(realWorldOrigin.m_x, realWorldOrigin.m_y, realWorldOrigin.m_z, realWorldSide.m_x, realWorldSide.m_y, realWorldSide.m_z);
 
 	glPopMatrix();
 
@@ -248,28 +255,29 @@ void display_func()
     glutSetWindowTitle("SPH Multiple Fluid Prototype");
 }
 
-void idle_func()
+void idleFunc()
 {
 	glutPostRedisplay();
 }
 
-void reshape_func(GLint width, GLint height)
+void reshapeFunc(GLint _width, GLint _height)
 {
-	window_width=width;
-	window_height=height;
+    windowWidth=_width;
+    windowHeight=_height;
 
-	glViewport(0, 0, width, height);
+    glViewport(0, 0, _width, _height);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
-    gluPerspective(45.0, (float)width/height, 0.1, 100.0);
+    gluPerspective(45.0, (float)_width/_height, 0.1, 100.0);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	glTranslatef(0.0f, 0.0f, -3.0f);
 }
 
-void keyboard_func(unsigned char key, int x, int y)
+//scenario keyboard setup, also start/stop button
+void keyboardFunc(unsigned char key, int x, int y)
 {
 	if(key == ' ')
 	{
@@ -318,28 +326,21 @@ void keyboard_func(unsigned char key, int x, int y)
 	glutPostRedisplay();
 }
 
+//needed for arrow keys, movement of camera
 void SpecialInput(int key, int x, int y)
 {
     switch(key)
     {
-        case GLUT_KEY_UP:
-            yTrans -= 0.5f;
-        break;
-        case GLUT_KEY_DOWN:
-            yTrans += 0.5f;
-        break;
-        case GLUT_KEY_LEFT:
-            xTrans += 0.5f;
-        break;
-        case GLUT_KEY_RIGHT:
-            xTrans -= 0.5f;
-        break;
+        case GLUT_KEY_UP: { yTrans -= 0.5f; break; }
+        case GLUT_KEY_DOWN: { yTrans += 0.5f; break; }
+        case GLUT_KEY_LEFT: { xTrans += 0.5f; break; }
+        case GLUT_KEY_RIGHT: { xTrans -= 0.5f; break; }
     }
-
     glutPostRedisplay();
 }
 
-void mouse_func(int button, int state, int x, int y)
+//mouse state readin
+void mouseFunc(int button, int state, int x, int y)
 {
 	if (state == GLUT_DOWN)
 	{
@@ -355,11 +356,12 @@ void mouse_func(int button, int state, int x, int y)
     glutPostRedisplay();
 }
 
-void motion_func(int x, int y)
+//mouse dragging for camera rotation
+void motionFunc(int _x, int _y)
 {
     float dx, dy;
-    dx = (float)(x - ox);
-    dy = (float)(y - oy);
+    dx = (float)(_x - ox);
+    dy = (float)(_y - oy);
 
 	if (buttonState == 1) 
 	{
@@ -367,7 +369,7 @@ void motion_func(int x, int y)
 		yRotLength += dx / 5.0f;
 	}
 
-	ox = x; oy = y;
+    ox = _x; oy = _y;
 
 	glutPostRedisplay();
 }
@@ -375,26 +377,27 @@ void motion_func(int x, int y)
 int main(int argc, char **argv)
 {
     glutInit(&argc, argv);
+                                        //need this extra depth tag on mac osx, otherwise get translucent behaviour
     glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
     glutInitWindowPosition(0, 0);
-    glutInitWindowSize(window_width, window_height);
+    glutInitWindowSize(windowWidth, windowHeight);
     glutCreateWindow("SPH Fluid 3D");
 
-    init_sph_system();
+    initSphSystem();
 	init();
-	init_ratio();
-	set_shaders();
+    initRatio();
+    setShaders();
 	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE_NV);
 	glEnable(GL_POINT_SPRITE_ARB);
 	glTexEnvi(GL_POINT_SPRITE_ARB, GL_COORD_REPLACE_ARB, GL_TRUE);
 
-    glutDisplayFunc(display_func);
-	glutReshapeFunc(reshape_func);
-	glutKeyboardFunc(keyboard_func);
+    glutDisplayFunc(displayFunc);
+    glutReshapeFunc(reshapeFunc);
+    glutKeyboardFunc(keyboardFunc);
     glutSpecialFunc(SpecialInput);
-	glutMouseFunc(mouse_func);
-	glutMotionFunc(motion_func);
-	glutIdleFunc(idle_func);
+    glutMouseFunc(mouseFunc);
+    glutMotionFunc(motionFunc);
+    glutIdleFunc(idleFunc);
 
     glutMainLoop();
 

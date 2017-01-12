@@ -1,4 +1,4 @@
-/** File:		sph_header.h
+/** File:		SphType.h
  ** Author:		Dongli Zhang
  ** Contact:	dongli.zhang0129@gmail.com
  **
@@ -19,17 +19,27 @@
  ** Foundation, 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#ifndef __SPHHEADER_H__
-#define __SPHHEADER_H__
+/// \file SphType.h
+/// \brief defining types
+/// \author Dongli Zhang
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <time.h>
+#ifndef SPHTYPE_H_
+#define SPHTYPE_H_
 
-#define PI 3.141592f
-#define INF 1E-12f
-#define BOUNDARY 0.0001f
-#define PHASES 2
+typedef unsigned int uint;
 
-#endif
+struct int3
+{
+	int x;
+	int y;
+	int z;
+};
+
+struct uint3
+{
+	uint x;
+	uint y;
+	uint z;
+};
+
+#endif  //SPHTYPE_H_

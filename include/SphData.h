@@ -1,4 +1,4 @@
-/** File:		sph_data.h
+/** File:		SphData.h
  ** Author:		Dongli Zhang
  ** Contact:	dongli.zhang0129@gmail.com
  **
@@ -19,16 +19,21 @@
  ** Foundation, 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#ifndef __SPHDATA_H__
-#define __SPHDATA_H__
+/// \file SphData.h
+/// \brief holds data for camera rotation and world positioning
+/// \author Dongli Zhang modified by Edina Morris
 
-#include "sph_header.h"
-#include "sph_type.h"
-#include "vec3.h"
+#ifndef SPHDATA_H_
+#define SPHDATA_H_
 
-float window_width=1000;
-float window_height=1000;
+#include "SphHeader.h"
+#include "SphType.h"
+#include "Vec3.h"
 
+float windowWidth=1000;
+float windowHeight=1000;
+
+//initial camera values
 float xRot = 0.0f;
 float yRot = -30.0f;
 float xTrans = 0.0;
@@ -41,12 +46,13 @@ int buttonState;
 float xRotLength = 0.0f;
 float yRotLength = 0.0f;
 
-vec3 real_world_origin;
-vec3 real_world_side;
-vec3 sim_ratio;
+//used for scaling and positions
+vec3 realWorldOrigin;
+vec3 realWorldSide;
+vec3 simRatio;
 
-float world_width;
-float world_height;
-float world_length;
+float worldWidth;
+float worldHeight;
+float worldLength;
 
-#endif
+#endif //SPHDATA_H_

@@ -9,18 +9,18 @@ QT+= opengl core gui
 INCLUDEPATH+=./include \
             /usr/local/include
 
-SOURCES+=$$PWD/src/sph_main.cpp \
-         $$PWD/src/sph_particle.cpp \
-         $$PWD/src/sph_system.cpp \
-    src/sph_phasedata.cpp
+SOURCES+=$$PWD/src/SphMain.cpp \
+         $$PWD/src/SphSystem.cpp \
+         $$PWD/src/SphPhaseData.cpp \
+         $$PWD/src/Vec3.cpp
 
-HEADERS+=$$PWD/include/sph_data.h \
-         $$PWD/include/sph_header.h \
-         $$PWD/include/sph_system.h \
-         $$PWD/include/sph_type.h \
-         $$PWD/include/sph_particle.h \
-         $$PWD/include/vec3.h \
-    include/sph_phasedata.h
+HEADERS+=$$PWD/include/SphData.h \
+         $$PWD/include/SphHeader.h \
+         $$PWD/include/SphSystem.h \
+         $$PWD/include/SphType.h \
+         $$PWD/include/SphParticle.h \
+         $$PWD/include/Vec3.h \
+         $$PWD/include/SphPhaseData.h
 
 OTHER_FILES+=$$PWD/Shader/shader.fs \
              $$PWD/Shader/shader.vs
